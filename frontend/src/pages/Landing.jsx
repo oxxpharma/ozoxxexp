@@ -63,6 +63,24 @@ export default function Landing() {
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 lg:gap-12 items-center">
+
+          {appearance.hero_side_image_url && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 1.1, delay: 0.25, type: "spring", stiffness: 60 }}
+              className="lg:hidden -mt-8 mb-2 flex justify-center order-first"
+            >
+              <img
+                src={appearance.hero_side_image_url}
+                alt=""
+                className="w-64 sm:w-80 h-auto object-contain"
+                style={{ filter: "drop-shadow(0 20px 40px rgba(40, 185, 252, 0.3))" }}
+                data-testid="hero-side-image-mobile"
+              />
+            </motion.div>
+          )}
+
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -156,11 +174,9 @@ export default function Landing() {
                 animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               />
-              <motion.img
+              <img
                 src={appearance.hero_side_image_url}
                 alt=""
-                animate={{ y: [0, -14, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 className="relative w-[480px] xl:w-[560px] h-auto object-contain"
                 style={{ filter: "drop-shadow(0 30px 60px rgba(40, 185, 252, 0.25))" }}
                 data-testid="hero-side-image"
@@ -168,24 +184,6 @@ export default function Landing() {
             </motion.div>
           )}
 
-          {appearance.hero_side_image_url && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 1.1, delay: 0.4, type: "spring", stiffness: 60 }}
-              className="lg:hidden -mt-4 mb-4 flex justify-center"
-            >
-              <motion.img
-                src={appearance.hero_side_image_url}
-                alt=""
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="w-64 sm:w-80 h-auto object-contain"
-                style={{ filter: "drop-shadow(0 20px 40px rgba(40, 185, 252, 0.3))" }}
-                data-testid="hero-side-image-mobile"
-              />
-            </motion.div>
-          )}
           </div>
         </div>
       </section>
