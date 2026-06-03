@@ -1,59 +1,55 @@
 # Ozoxx Experience — PRD
 
-## Problem Statement (original, PT-BR)
-Criar landing page do evento "Ozoxx Experience" (08-09 Outubro, São Paulo) com painel administrativo completo, gestão de usuários multi-role (admin/comercial/financeiro/credenciadora/participante), pedidos, ingressos, pagamentos via PagBank (PIX + Cartão), geração de credencial com QR Code enviado por e-mail (Resend), opção de acompanhante (2 ingressos + 2 credenciais), painel de credenciadora com scanner QR via câmera, retry de pagamento sem refazer pedido, add-to-calendar (Google/Outlook/Apple), login social Google + login normal, segurança robusta, design moderno com glassmorphism, paleta #18245a / #28b9fc / #070711.
-
 ## Stack
-- Backend: FastAPI + MongoDB (motor) + JWT (bcrypt) + Emergent Google Auth + PagBank API v4 + Resend
+- Backend: FastAPI + MongoDB (motor) + JWT (bcrypt) + Emergent Google Auth + PagBank API v4 + Resend + Object Storage + reportlab (PDF)
 - Frontend: React 19 + react-router 7 + framer-motion + shadcn/ui + Clash Display + Manrope + qrcode.react + html5-qrcode
 
-## User Personas
-- **Visitante** — chega na landing, vê info + countdown, compra ingresso.
-- **Participante** — após compra, recebe credencial por e-mail, vê em /dashboard, pode adicionar à agenda.
-- **Admin** — configura aparência, evento, ingressos, usuários, integrações (PagBank/Resend).
-- **Comercial** — visualiza ingressos/pedidos (RBAC parcial).
-- **Financeiro** — visualiza pedidos/pagamentos.
-- **Credenciadora** — abre /scanner e valida QR codes na entrada do evento.
+## Implemented (v1 + v2)
+### v1 (Feb 2026)
+- Landing page (hero+countdown, marquee, bento, gallery, tickets, FAQ, add-to-calendar)
+- JWT auth + Emergent Google Auth + RBAC
+- Checkout titular + acompanhante + PagBank PIX/Cartão
+- Payment page com QR PIX, copia-cola, retry, polling, simulate-pay
+- Dashboard participante com credenciais QR
+- Scanner credenciadora (html5-qrcode + manual)
+- Admin (Overview, Aparência, Evento, Ingressos, Usuários, Pedidos, Integrações test-connection)
+- 41/41 testes backend passando
 
-## Core Requirements (static)
-- Landing pública com hero, countdown, bento sobre, galeria, ingressos, FAQ, add-to-calendar
-- Auth: JWT email/senha + Emergent Google Auth + RBAC por roles
-- Checkout: ingresso titular + opção acompanhante (2x preço + 2 credenciais)
-- Pagamento: PagBank (PIX + cartão), credenciais geradas pós-pagamento, retry sem refazer pedido
-- Credencial: QR Code (12 hex code OZX-XXXX), enviada por e-mail e visível no painel
-- Scanner mobile-first com câmera (html5-qrcode) e entrada manual de fallback
-- Admin: aparência (logo, cores, hero img, galeria, FAQ), evento (datas, local, descrição, textos), ingressos CRUD, usuários CRUD com roles, pedidos com detalhe, integrações (PagBank/Resend) com "testar conexão"
-- Segurança: bcrypt, JWT 8h + refresh 30d, cookies httpOnly secure, role-based middleware, sanitização de PII em endpoints públicos
+### v2 (Feb 2026 — adicionado)
+- **Sistema de Lotes** (preço + qtd disponível, contador "X restantes" na landing)
+- **Cupons** (percent + fixed, validate público, uses limit, valid_until)
+- **Programa de Líderes** completo: admin promove → slug `/l/{slug}` único → progress bar no painel do líder → ingresso de cortesia auto-gerado ao bater meta
+- **Sistema de E-mails**: templates CRUD (4 default seeded: reset/welcome/leader-goal/payment-failed) + envio personalizado (all/paid/leaders/specific) + logs de todos os envios
+- **Reset de senha** via Resend (token expira em 1h, sem enum leak)
+- **PDF da credencial** (reportlab, baixável no dashboard participante e admin)
+- **UTM tracking** completo: pageview tracking + funil (visitas→checkout→pedidos→pagos) + UTM sources com receita
+- **Carrinhos abandonados** (>24h sem pagamento)
+- **Perfil de clientes** (por sexo/estado/cidade)
+- **Vendas por lote**, **métodos de pagamento**, **status**
+- **Cortesia manual** (admin gera ingresso grátis no painel)
+- **Mudança manual de status** de pedido (com auto-geração de credencial em PAID/COURTESY)
+- **Reenviar e-mail** da credencial
+- **Ver credencial completa** (com QR + PDF) no painel admin de pedidos
+- **Upload de imagens** via Object Storage (logo, hero, galeria — direto pelo admin)
+- **Formulário expandido**: nascimento, sexo, cidade, estado (em registro, checkout, admin)
+- **Painel admin enriquecido**: 6 cards de métricas + receita + funil + chart de visitas diárias + UTM + abandonos + perfil + lotes + métodos
+- **Relatórios** (6 abas: Vendas, UTM, Pagamentos, Clientes, Abandonos, Export CSV)
+- **Tema clarificado** (bg #070b1e em vez de #070711, gradientes mais visíveis)
+- 27/27 novos testes backend passando
 
-## Implemented (Feb 2026)
-- ✅ Landing page completa (hero+countdown, marquee, bento, gallery, tickets, FAQ, CTA, footer) com framer-motion fade-ups e glassmorphism
-- ✅ Backend JWT auth + Emergent Google Auth callback (/api/auth/google/session) + AuthProvider/Protected no front
-- ✅ MongoDB models para users, orders, credentials, ticket_types, app_settings, user_sessions
-- ✅ Admin panel completo (Overview/Stats, Appearance, Event, Tickets CRUD, Users CRUD, Orders detail, Integrations com test-connection PagBank + Resend)
-- ✅ Checkout com titular + acompanhante toggle + PIX/Cartão + resumo
-- ✅ Payment page com QR PIX, copia-cola, retry, polling automático de status, simulate-pay (dev)
-- ✅ Dashboard do participante com credenciais (QR PNG base64), download, lista de pedidos com retomar
-- ✅ Scanner credenciadora com câmera (html5-qrcode), entrada manual, animações de sucesso/erro, histórico de check-ins
-- ✅ Add-to-calendar (Google, Outlook, .ics Apple)
-- ✅ Webhook PagBank /api/webhook/pagbank
-- ✅ Admin seed (admin@ozoxx.com / OzoxxAdmin@2025)
-- ✅ 41/41 testes backend passando
+## Backlog (P1/P2)
+- P1: WhatsApp da credencial (Twilio/Z-API — adiado pelo usuário)
+- P1: Rate limit em /forgot-password
+- P1: Validação Pydantic gt=0 em preços/metas
+- P2: Soft-delete em lots
+- P2: Cron de limpeza de WAITING orders > 24h
+- P2: Splitting de orders_routes.py em módulos (>500 linhas)
+- P2: Web push notifications para líderes (quando alguém compra pelo link)
+- P2: Programação/lineup do evento
 
-## Backlog / Próximos passos (P1/P2)
-- P1: Tela de "esqueci minha senha" + reset link (atualmente backend só logga)
-- P1: Upload de logo + galeria via object storage ao invés de URL manual
-- P1: PDF da credencial baixável (atualmente só PNG)
-- P1: Geração de relatórios financeiros (CSV/Excel) por período
-- P2: Notificações WhatsApp da credencial (Twilio)
-- P2: Cupons/códigos promocionais
-- P2: Cartões VIP/Founders com lotes de preço diferentes (a estrutura já suporta múltiplos ticket_types)
-- P2: Page de lineup/atrações com schedule
-- P2: Indicação de amigos / programa de referência
-
-## Sugestões adicionais (para considerar)
-- Programa de afiliados/embaixadores (link único por usuário, comissão por venda)
-- Pré-cadastro com "fila VIP" antes da abertura das vendas
-- Tracking UTM por canal (Insta/Meta/TikTok) no checkout
-- Painel público do evento com lineup, mapa interativo do local, programação por dia
-- Integração com Mailchimp/Brevo para captura de leads na landing
-- LGPD: termos de uso + política de privacidade + opt-in marketing explícito
+## Suggestions
+- Painel de lineup interativo (palestrantes, horários, mapa do evento)
+- Pré-cadastro com fila VIP antes da abertura das vendas
+- Ranking público dos líderes (top 10)
+- Reservas de ingresso (hold por 10 min antes do pagamento)
+- Cross-sell: pacote evento+hospedagem via parcerias
