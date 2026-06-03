@@ -1,0 +1,124 @@
+{
+  "project_name": "Ozoxx Experience",
+  "theme_strategy": {
+    "theme": "dark",
+    "archetype": "5 - Luxury / Tech Event",
+    "description": "A high-end, immersive, and modern event landing page mixed with a comprehensive multi-role SaaS dashboard. Avoids generic AI templates. Focuses on cinematic lighting, glassmorphism, smooth animations, and high contrast typography.",
+    "language": "pt-BR"
+  },
+  "colors": {
+    "background": "#070711",
+    "background_secondary": "#0a0c1a",
+    "primary": "#28b9fc",
+    "primary_hover": "#1ca0e3",
+    "secondary": "#18245a",
+    "text_main": "#ffffff",
+    "text_muted": "#a0a8c0",
+    "border": "rgba(255, 255, 255, 0.1)",
+    "glass_bg": "rgba(24, 36, 90, 0.2)",
+    "success": "#10b981",
+    "danger": "#ef4444",
+    "warning": "#f59e0b"
+  },
+  "typography": {
+    "font_heading": "Clash Display, sans-serif",
+    "font_body": "Manrope, sans-serif",
+    "scale": {
+      "h1": "text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tighter leading-none",
+      "h2": "text-4xl sm:text-5xl font-medium tracking-tight",
+      "h3": "text-2xl sm:text-3xl font-medium tracking-tight",
+      "body_lg": "text-lg leading-relaxed text-text_muted",
+      "body": "text-base leading-relaxed text-text_muted",
+      "overline": "text-xs font-bold uppercase tracking-[0.2em] text-primary"
+    },
+    "guidelines": "No Inter or Roboto. Use Clash Display for impactful, modern headers. Body text must be Manrope for extreme legibility in dashboard density. Always add tracking-tight to headings."
+  },
+  "glassmorphism_tokens": {
+    "navbar": "bg-[#070711]/70 backdrop-blur-2xl border-b border-white/5",
+    "card_heavy": "bg-[#18245a]/20 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl",
+    "card_light": "bg-white/5 backdrop-blur-md border border-white/5 rounded-xl transition-all hover:bg-white/10",
+    "glow_shadow": "shadow-[0_0_30px_rgba(40,185,252,0.15)]"
+  },
+  "spacing_and_layout": {
+    "container_padding": "px-6 md:px-12 lg:px-24",
+    "section_spacing": "py-24 lg:py-32",
+    "bento_grid": "grid grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-6 lg:gap-8",
+    "guidelines": "Generous spacing. Break symmetry. Use bento grid patterns for event features. Always pad containers with borders. For dashboards, use tight gaps (gap-4) and strictly maximize screen real estate."
+  },
+  "motion_guidelines": {
+    "engine": "framer-motion",
+    "smooth_appear": "initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}",
+    "stagger_children": "transition={{ staggerChildren: 0.1 }}",
+    "hover_lift": "hover:-translate-y-1 transition-transform duration-300 ease-out",
+    "guidelines": "All page entrances must fade in and slide up smoothly. Do not over-animate; stick to elegant transitions. Use smooth scrolling (Lenis style if possible)."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-background font-semibold px-8 py-4 rounded-full hover:bg-primary_hover transition-colors shadow-[0_0_20px_rgba(40,185,252,0.3)]",
+      "secondary": "bg-transparent border border-white/20 text-white px-8 py-4 rounded-full hover:bg-white/10 transition-colors"
+    },
+    "cards": "Never use pure white backgrounds. Use glass_bg tokens. Apply glowing borders on hover.",
+    "shadcn_overrides": "Customize Shadcn UI to fit dark theme. Remove Vercel-like sharp edges, use rounded-xl or rounded-2xl. Dialogs and Modals MUST use glassmorphism backgrounds."
+  },
+  "pages_and_features": [
+    {
+      "name": "Landing Page",
+      "path": "/",
+      "sections": [
+        "Hero: Full viewport. Background image provided by user with a radial or linear black/gradient overlay (max bg-black/60). Headline 'Ozoxx Experience', subheadline, and a highly visible Countdown timer to Oct 8, 2025. Primary CTA 'Garantir Ingresso'.",
+        "Marquee: Infinite scrolling text ribbon reading 'OZOXX EXPERIENCE SÃO PAULO 2025' separated by dots or stars.",
+        "Event Details (Bento Grid): Dates (08 e 09 de Outubro), Location (São Paulo), Description of the immersive experience.",
+        "Gallery: Masonry or horizontal scroll of event/concert networking images.",
+        "Tickets/Pricing: Cards showing Single Ticket and Ticket + Companion. Clear pricing, benefits, and 'Comprar Agora' CTA.",
+        "FAQ & Footer: Clean accordion for FAQs. Large footer with links."
+      ]
+    },
+    {
+      "name": "Auth & Registration",
+      "path": "/login, /register, /checkout",
+      "features": [
+        "Login with Email/Password + Google.",
+        "Checkout flow: Collect user info, optional companion info, payment integration (PagBank).",
+        "Must support creating 2 credentials if companion is included."
+      ]
+    },
+    {
+      "name": "Participant Dashboard",
+      "path": "/dashboard/participant",
+      "features": [
+        "Welcome message.",
+        "Digital Credential Card: A beautiful, glassmorphic ID card layout featuring the user's name, ticket type, and a large QR Code.",
+        "Options to Download PDF or retry payment if failed."
+      ]
+    },
+    {
+      "name": "Admin Dashboard",
+      "path": "/admin/*",
+      "layout": "Sidebar navigation (lucide-react icons). High density data tables.",
+      "features": [
+        "Overview: Stats on sales, check-ins.",
+        "Appearance: Form to update logo URL, landing page text, colors.",
+        "Users & Roles: Table managing (admin, comercial, financeiro, credenciadora).",
+        "Orders & Payments: Monitor transactions, PagBank statuses.",
+        "Settings: Configure API keys, event dates, location details."
+      ]
+    },
+    {
+      "name": "Scanner App (Credenciadora)",
+      "path": "/scanner",
+      "features": [
+        "Mobile-first view.",
+        "Uses camera to scan QR Codes from credentials.",
+        "Displays Success (Valid) or Error (Invalid/Already Checked-in) overlay."
+      ]
+    }
+  ],
+  "image_urls": {
+    "hero_background": "https://customer-assets.emergentagent.com/job_5ee424cc-79c0-4969-8e00-992b32e1f84b/artifacts/0rh9068z_fundo.jpg",
+    "gallery_1_networking": "https://images.unsplash.com/photo-1558008258-3256797b43f3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHw0fHxjb25mZXJlbmNlJTIwbmV0d29ya2luZyUyMGV2ZW50fGVufDB8fHx8MTc4MDQ5NjMzNXww&ixlib=rb-4.1.0&q=85",
+    "gallery_2_stage": "https://images.unsplash.com/photo-1657208431551-cbf415b8ef26?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDR8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwc3RhZ2UlMjBsaWdodHN8ZW58MHx8fHwxNzgwNDk2MzM1fDA&ixlib=rb-4.1.0&q=85",
+    "gallery_3_sp_city": "https://images.pexels.com/photos/6420235/pexels-photo-6420235.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "testing_requirements": "All interactive elements, forms, and key informational elements MUST include a data-testid attribute formatted as kebab-case and role-based (e.g., data-testid='checkout-submit-button').",
+  "instructions_to_main_agent": "1. Set up Tailwind config with custom colors and fonts (Clash Display & Manrope). 2. Build landing page with framer-motion for smooth reveal. 3. Ensure hero image has proper overlay for text contrast. 4. Build hybrid app routing (public vs protected dashboards). 5. Customize shadcn components to remove generic look. 6. Implement QR code component for credentials."
+}
