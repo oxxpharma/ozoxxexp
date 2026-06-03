@@ -163,11 +163,23 @@ export default function Overview() {
         <div className="glass-card rounded-3xl p-6">
           <h3 className="font-display text-xl mb-4">Perfil dos clientes</h3>
           {!profile ? <p className="text-ozx-muted text-sm">Carregando...</p> : (
-            <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="space-y-4">
+              {profile.avg_age && (
+                <div className="bg-ozx-primary/5 border border-ozx-primary/20 rounded-xl px-3 py-2">
+                  <p className="text-xs text-ozx-muted uppercase">Idade média</p>
+                  <p className="font-display text-2xl text-ozx-primary">{profile.avg_age} anos</p>
+                </div>
+              )}
+              <div className="grid grid-cols-4 gap-2 text-xs">
               <div>
                 <p className="text-ozx-muted uppercase mb-2">Sexo</p>
                 {profile.by_gender.map((r) => <p key={r._id}>{r._id}: {r.count}</p>)}
                 {profile.by_gender.length === 0 && <p className="text-ozx-muted">—</p>}
+              </div>
+              <div>
+                <p className="text-ozx-muted uppercase mb-2">Idade</p>
+                {(profile.by_age || []).map((r) => <p key={r._id}>{r._id}: {r.count}</p>)}
+                {(!profile.by_age || profile.by_age.length === 0) && <p className="text-ozx-muted">—</p>}
               </div>
               <div>
                 <p className="text-ozx-muted uppercase mb-2">Estados</p>
@@ -178,6 +190,7 @@ export default function Overview() {
                 <p className="text-ozx-muted uppercase mb-2">Cidades</p>
                 {profile.by_city.map((r) => <p key={r._id}>{r._id}: {r.count}</p>)}
                 {profile.by_city.length === 0 && <p className="text-ozx-muted">—</p>}
+              </div>
               </div>
             </div>
           )}

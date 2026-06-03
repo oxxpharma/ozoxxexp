@@ -102,20 +102,33 @@ export default function AdminReports() {
 
         <TabsContent value="profile">
           {profile && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="glass-card rounded-3xl p-6">
-                <h3 className="font-display text-lg mb-4">Sexo</h3>
-                {profile.by_gender.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{genderLabel(r._id)}</span><span className="text-ozx-primary">{r.count}</span></div>)}
+            <>
+              {profile.avg_age && (
+                <div className="glass-card rounded-3xl p-6 mb-4 max-w-xs">
+                  <p className="text-xs uppercase text-ozx-muted">Idade média</p>
+                  <p className="font-display text-4xl text-ozx-primary mt-1">{profile.avg_age} anos</p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="glass-card rounded-3xl p-6">
+                  <h3 className="font-display text-lg mb-4">Sexo</h3>
+                  {profile.by_gender.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{genderLabel(r._id)}</span><span className="text-ozx-primary">{r.count}</span></div>)}
+                </div>
+                <div className="glass-card rounded-3xl p-6">
+                  <h3 className="font-display text-lg mb-4">Idade</h3>
+                  {(profile.by_age || []).map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{r._id}</span><span className="text-ozx-primary">{r.count}</span></div>)}
+                  {(!profile.by_age || profile.by_age.length === 0) && <p className="text-ozx-muted text-sm">—</p>}
+                </div>
+                <div className="glass-card rounded-3xl p-6">
+                  <h3 className="font-display text-lg mb-4">Estados</h3>
+                  {profile.by_state.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{r._id}</span><span className="text-ozx-primary">{r.count}</span></div>)}
+                </div>
+                <div className="glass-card rounded-3xl p-6">
+                  <h3 className="font-display text-lg mb-4">Cidades</h3>
+                  {profile.by_city.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{r._id}</span><span className="text-ozx-primary">{r.count}</span></div>)}
+                </div>
               </div>
-              <div className="glass-card rounded-3xl p-6">
-                <h3 className="font-display text-lg mb-4">Estados</h3>
-                {profile.by_state.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{r._id}</span><span className="text-ozx-primary">{r.count}</span></div>)}
-              </div>
-              <div className="glass-card rounded-3xl p-6">
-                <h3 className="font-display text-lg mb-4">Cidades</h3>
-                {profile.by_city.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{r._id}</span><span className="text-ozx-primary">{r.count}</span></div>)}
-              </div>
-            </div>
+            </>
           )}
         </TabsContent>
 

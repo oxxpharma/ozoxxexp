@@ -116,7 +116,36 @@ async def customer_profile(user: dict = Depends(require_roles(["admin"]))):
         {"$sort": {"count": -1}},
         {"$limit": 10},
     ]).to_list(10)
-    return {"by_gender": by_gender, "by_state": by_state, "by_city": by_city}
+
+    # Age buckets (computed from birth_date)
+    today = datetime.now(timezone.utc)
+    buckets = {"<18": 0, "18-24": 0, "25-34": 0, "35-44": 0, "45-54": 0, "55+": 0, "Não informado": 0}
+    users_with_birth = await db.users.find({"birth_date": {"$exists": True, "$ne": ""}}, {"_id": 0, "birth_date": 1}).to_list(10000)
+    total_with_birth = 0
+    sum_age = 0
+    for u in users_with_birth:
+        bd = u.get("birth_date")
+        if not bd:
+            continue
+        try:
+            dt = datetime.fromisoformat(bd.replace("Z", "+00:00")) if "T" in bd else datetime.strptime(bd, "%Y-%m-%d")
+            age = today.year - dt.year - ((today.month, today.day) < (dt.month, dt.day))
+            total_with_birth += 1
+            sum_age += age
+            if age < 18: buckets["<18"] += 1
+            elif age <= 24: buckets["18-24"] += 1
+            elif age <= 34: buckets["25-34"] += 1
+            elif age <= 44: buckets["35-44"] += 1
+            elif age <= 54: buckets["45-54"] += 1
+            else: buckets["55+"] += 1
+        except (ValueError, AttributeError):
+            continue
+    no_birth = await db.users.count_documents({"$or": [{"birth_date": {"$exists": False}}, {"birth_date": ""}]})
+    buckets["Não informado"] = no_birth
+    by_age = [{"_id": k, "count": v} for k, v in buckets.items() if v > 0]
+    avg_age = round(sum_age / total_with_birth, 1) if total_with_birth > 0 else None
+
+    return {"by_gender": by_gender, "by_state": by_state, "by_city": by_city, "by_age": by_age, "avg_age": avg_age}
 
 
 @analytics_router.get("/sales-summary")
