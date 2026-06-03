@@ -112,6 +112,26 @@ class AppearanceConfig(BaseModel):
         "ONDE EMOÇÃO ACONTECE",
         "EDIÇÃO INAUGURAL",
     ])
+    about_card1_title: str = "Programação imersiva"
+    about_card1_text: str = "Shows, palestras, painéis exclusivos, lounges premium e ativações de marca cuidadosamente curadas. Cada minuto pensado para você."
+    about_card2_title: str = "Networking de alto nível"
+    about_card2_text: str = "Conecte-se com fundadores, criadores e líderes de marca em ambientes pensados para conversas que importam."
+
+
+class SpeakerCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    photo_url: Optional[str] = ""
+    order: int = 0
+    is_active: bool = True
+
+
+class SpeakerUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    photo_url: Optional[str] = None
+    order: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 class TicketTypeCreate(BaseModel):
