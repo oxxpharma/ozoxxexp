@@ -99,16 +99,25 @@ export default function Landing() {
               <Typewriter
                 text={(event.location_city || "São Paulo").toUpperCase()}
                 speed={130}
+                eraseSpeed={70}
                 startDelay={900}
+                holdAfterTyped={3500}
+                holdAfterErased={500}
+                loop
                 className="relative font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.02em] text-ozx-primary inline-flex items-baseline"
                 cursorClassName="text-ozx-primary"
                 testId="hero-location-typewriter"
               />
             </div>
 
-            <p className="text-base sm:text-lg text-ozx-muted max-w-xl mb-8 leading-relaxed" data-testid="hero-subheadline">
-              {event.hero_subheadline}
-            </p>
+            <Typewriter
+              text={event.hero_subheadline}
+              speed={32}
+              startDelay={2400}
+              showCursor={false}
+              className="text-base sm:text-lg text-ozx-muted max-w-xl mb-8 leading-relaxed inline-block min-h-[3em]"
+              testId="hero-subheadline"
+            />
 
             <div className="mb-10">
               <p className="text-xs uppercase tracking-[0.25em] text-ozx-primary mb-4">A experiência começa em</p>
