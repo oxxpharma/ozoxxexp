@@ -52,6 +52,10 @@ export default function Appearance() {
           <ImageUpload label="Imagem ao lado do título (hero)" value={data.hero_side_image_url} onChange={(v) => set("hero_side_image_url", v)} testId="appearance-hero-side" />
           <p className="text-xs text-ozx-muted mt-2">Aparece ao lado de "Ozoxx Experience" no topo da landing. Ideal: imagem com fundo transparente (PNG).</p>
         </div>
+        <div className="glass-card rounded-3xl p-5 md:col-span-2">
+          <ImageUpload label="Logo secundária (acima do título)" value={data.hero_secondary_logo_url} onChange={(v) => set("hero_secondary_logo_url", v)} testId="appearance-hero-logo" />
+          <p className="text-xs text-ozx-muted mt-2">Pequena logo/símbolo exibido acima de "Ozoxx Experience" no hero. Ideal: PNG transparente quadrado/horizontal.</p>
+        </div>
       </div>
 
       <div className="glass-card rounded-3xl p-6 mb-6">

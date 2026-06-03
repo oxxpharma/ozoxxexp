@@ -50,27 +50,46 @@ export default function Landing() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 lg:gap-16 items-end">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 lg:gap-12 items-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-4xl"
+            className="max-w-3xl"
           >
             <div className="inline-flex items-center gap-2 glass-card rounded-full px-4 py-1.5 mb-8" data-testid="hero-badge">
               <span className="h-1.5 w-1.5 rounded-full bg-ozx-primary animate-pulse" />
               <span className="text-xs tracking-[0.25em] uppercase text-ozx-muted">{event.short_pitch}</span>
             </div>
 
-            <h1 className="font-display text-5xl sm:text-7xl lg:text-[110px] font-semibold tracking-[-0.03em] leading-[0.95] mb-6" data-testid="hero-headline">
+            {appearance.hero_secondary_logo_url && (
+              <motion.img
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.15 }}
+                src={appearance.hero_secondary_logo_url}
+                alt=""
+                className="h-16 sm:h-20 lg:h-24 w-auto mb-4"
+                data-testid="hero-secondary-logo"
+              />
+            )}
+
+            <h1 className="font-display text-4xl sm:text-6xl lg:text-[88px] font-semibold tracking-[-0.03em] leading-[0.95] mb-3" data-testid="hero-headline">
               {event.hero_headline}<span className="text-ozx-primary">.</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-ozx-muted max-w-2xl mb-10 leading-relaxed" data-testid="hero-subheadline">
+            <div className="relative inline-block mb-8" data-testid="hero-location">
+              <div className="absolute inset-0 bg-ozx-primary/30 blur-2xl rounded-full" />
+              <p className="relative font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.02em] text-ozx-primary">
+                {(event.location_city || "São Paulo").toUpperCase()}
+              </p>
+            </div>
+
+            <p className="text-base sm:text-lg text-ozx-muted max-w-xl mb-8 leading-relaxed" data-testid="hero-subheadline">
               {event.hero_subheadline}
             </p>
 
-            <div className="mb-12">
+            <div className="mb-10">
               <p className="text-xs uppercase tracking-[0.25em] text-ozx-primary mb-4">A experiência começa em</p>
               <Countdown target={event.start_date} />
             </div>
@@ -89,16 +108,17 @@ export default function Landing() {
 
           {appearance.hero_side_image_url && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 30 }}
+              initial={{ opacity: 0, scale: 0.94, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 1.1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
               className="relative hidden lg:block"
             >
-              <div className="absolute -inset-6 bg-ozx-primary/20 blur-3xl rounded-full" />
+              <div className="absolute -inset-10 bg-ozx-primary/15 blur-[80px] rounded-full" />
               <img
                 src={appearance.hero_side_image_url}
                 alt=""
-                className="relative w-[320px] xl:w-[420px] h-auto rounded-3xl border border-white/10 shadow-2xl glow-primary"
+                className="relative w-[480px] xl:w-[560px] h-auto object-contain"
+                style={{ filter: "drop-shadow(0 30px 60px rgba(40, 185, 252, 0.25))" }}
                 data-testid="hero-side-image"
               />
             </motion.div>
@@ -106,15 +126,16 @@ export default function Landing() {
 
           {appearance.hero_side_image_url && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
+              initial={{ opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.9, delay: 0.4 }}
-              className="lg:hidden -mt-4 mb-4"
+              className="lg:hidden -mt-4 mb-4 flex justify-center"
             >
               <img
                 src={appearance.hero_side_image_url}
                 alt=""
-                className="w-48 sm:w-64 h-auto rounded-2xl border border-white/10 shadow-2xl glow-primary"
+                className="w-64 sm:w-80 h-auto object-contain"
+                style={{ filter: "drop-shadow(0 20px 40px rgba(40, 185, 252, 0.3))" }}
                 data-testid="hero-side-image-mobile"
               />
             </motion.div>

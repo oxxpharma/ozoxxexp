@@ -89,6 +89,7 @@ class AppearanceConfig(BaseModel):
     logo_url: Optional[str] = ""
     logo_size: int = 32  # height in pixels (px)
     hero_side_image_url: Optional[str] = ""  # image rendered next to the hero title
+    hero_secondary_logo_url: Optional[str] = ""  # logo/badge shown above the hero title
     primary_color: str = "#28b9fc"
     secondary_color: str = "#18245a"
     background_color: str = "#070b1e"
