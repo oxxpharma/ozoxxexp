@@ -68,15 +68,14 @@ export default function Landing() {
             <motion.div
               initial={{ opacity: 0, scale: 0.85, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 1.1, delay: 0.25, type: "spring", stiffness: 60 }}
-              className="lg:hidden -mt-8 mb-2 flex justify-center order-first"
+              transition={{ duration: 1, delay: 0.2 }}
+              className="lg:hidden flex justify-center order-first relative -mt-12 mb-2 h-32 sm:h-40"
+              data-testid="hero-mobile-glow"
             >
-              <img
-                src={appearance.hero_side_image_url}
-                alt=""
-                className="w-64 sm:w-80 h-auto object-contain"
-                style={{ filter: "drop-shadow(0 20px 40px rgba(40, 185, 252, 0.3))" }}
-                data-testid="hero-side-image-mobile"
+              <motion.div
+                className="absolute inset-0 m-auto h-48 w-48 sm:h-64 sm:w-64 bg-ozx-primary/20 blur-[80px] rounded-full"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.55, 0.9, 0.55] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               />
             </motion.div>
           )}
@@ -193,7 +192,9 @@ export default function Landing() {
         <div className="flex animate-marquee whitespace-nowrap">
           {Array(2).fill(0).map((_, i) => (
             <div key={i} className="flex items-center gap-8 px-4 font-display text-2xl sm:text-3xl">
-              {["OZOXX EXPERIENCE", "SÃO PAULO 2025", "08•09 OUTUBRO", "ONDE EMOÇÃO ACONTECE", "EDIÇÃO INAUGURAL", "OZOXX EXPERIENCE", "SÃO PAULO 2025", "08•09 OUTUBRO"].map((t, j) => (
+              {(appearance.marquee_words && appearance.marquee_words.length > 0
+                ? appearance.marquee_words.concat(appearance.marquee_words)
+                : []).map((t, j) => (
                 <span key={j} className="flex items-center gap-8">
                   <span className="text-white/80">{t}</span>
                   <span className="text-ozx-primary">✦</span>

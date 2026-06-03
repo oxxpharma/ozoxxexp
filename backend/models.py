@@ -105,6 +105,13 @@ class AppearanceConfig(BaseModel):
         {"q": "Como recebo minha credencial?", "a": "Assim que o pagamento for confirmado, você recebe a credencial por e-mail com QR Code e também tem acesso no painel do participante."},
         {"q": "Quais formas de pagamento são aceitas?", "a": "PIX e Cartão de Crédito processados via PagBank com segurança."},
     ])
+    marquee_words: List[str] = Field(default_factory=lambda: [
+        "OZOXX EXPERIENCE",
+        "SÃO PAULO 2026",
+        "08•09 OUTUBRO",
+        "ONDE EMOÇÃO ACONTECE",
+        "EDIÇÃO INAUGURAL",
+    ])
 
 
 class TicketTypeCreate(BaseModel):

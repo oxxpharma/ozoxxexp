@@ -11,15 +11,21 @@ import { Plus, X } from "lucide-react";
 export default function Appearance() {
   const [data, setData] = useState(null);
   const [faq, setFaq] = useState("");
+  const [marquee, setMarquee] = useState("");
 
   useEffect(() => {
-    api.get("/admin/appearance").then((r) => { setData(r.data); setFaq(JSON.stringify(r.data.faq || [], null, 2)); });
+    api.get("/admin/appearance").then((r) => {
+      setData(r.data);
+      setFaq(JSON.stringify(r.data.faq || [], null, 2));
+      setMarquee((r.data.marquee_words || []).join("\n"));
+    });
   }, []);
 
   const save = async () => {
     let parsedFaq = data.faq;
     try { parsedFaq = JSON.parse(faq); } catch { toast.error("FAQ não é JSON válido"); return; }
-    await api.put("/admin/appearance", { ...data, faq: parsedFaq });
+    const words = marquee.split("\n").map((s) => s.trim()).filter(Boolean);
+    await api.put("/admin/appearance", { ...data, faq: parsedFaq, marquee_words: words });
     toast.success("Aparência atualizada");
   };
 
@@ -79,6 +85,11 @@ export default function Appearance() {
           <Input value={data.secondary_color} onChange={(e) => set("secondary_color", e.target.value)} className="bg-white/5 border-white/10 text-white" /></div>
           <div><Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Fundo</Label>
           <Input value={data.background_color} onChange={(e) => set("background_color", e.target.value)} className="bg-white/5 border-white/10 text-white" /></div>
+        </div>
+        <div>
+          <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Frases do marquee rotativo (uma por linha)</Label>
+          <Textarea value={marquee} onChange={(e) => setMarquee(e.target.value)} rows={6} className="bg-white/5 border-white/10 text-white font-mono text-xs" placeholder="OZOXX EXPERIENCE&#10;SÃO PAULO 2026&#10;08•09 OUTUBRO" data-testid="appearance-marquee" />
+          <p className="text-xs text-ozx-muted mt-1">Frases que ficam rodando na faixa abaixo do hero. Use maiúsculas para mais impacto.</p>
         </div>
         <div>
           <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">FAQ (JSON: [&#123;q,a&#125;])</Label>
