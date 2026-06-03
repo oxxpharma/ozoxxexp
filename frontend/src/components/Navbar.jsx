@@ -48,6 +48,11 @@ export default function Navbar({ logoUrl }) {
         <div className="hidden lg:flex items-center gap-3">
           {user ? (
             <>
+              {user.role === "lider" && (
+                <Button variant="ghost" size="sm" onClick={() => navigate("/leader")} className="text-white hover:text-ozx-primary" data-testid="nav-leader-btn">
+                  <Shield className="w-4 h-4 mr-1.5" /> Meu Painel
+                </Button>
+              )}
               {user.role === "admin" && (
                 <Button variant="ghost" size="sm" onClick={() => navigate("/admin")} className="text-white hover:text-ozx-primary" data-testid="nav-admin-btn">
                   <Shield className="w-4 h-4 mr-1.5" /> Admin

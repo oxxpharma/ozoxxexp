@@ -10,12 +10,13 @@ module.exports = {
       },
       colors: {
         ozx: {
-          bg: '#070711',
-          bg2: '#0a0c1a',
+          bg: '#070b1e',
+          bg2: '#0e1430',
+          bg3: '#161e44',
           primary: '#28b9fc',
           primaryHover: '#1ca0e3',
           secondary: '#18245a',
-          muted: '#a0a8c0',
+          muted: '#b6bdd5',
           success: '#10b981',
           danger: '#ef4444',
           warning: '#f59e0b',

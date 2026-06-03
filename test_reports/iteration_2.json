@@ -1,0 +1,51 @@
+{
+  "summary": "v2 backend testing complete. 27/27 new tests pass in /app/backend/tests/backend_test_v2.py covering: public config with lots+current_lots, lots CRUD with sold_qty/remaining, coupons (auto-uppercase, duplicate→400, percent+fixed discount applied to order, validate endpoint), order creation with lot_id (auto-picks first active if omitted) + UTM tracking + leader linkage, lot oversell blocked (400), leaders (promote→bumps role, list with computed stats, public slug lookup, target_sales auto-courtesy after 2 paid orders, courtesy_credential_issued flag flips, COURTESY order auto-created for leader user), admin orders-actions (status change PAID/COURTESY auto-generates credentials, resend-email returns sent/total, manual-courtesy creates free order+credentials, credential-pdf returns application/pdf %PDF bytes), password reset (forgot returns 200 with no enum leak, reset with valid token works, invalid/reused token→400), email templates (4 seeded, full CRUD), email logs endpoint, custom send returns {sent,failed,total} without crashing on missing Resend key, tracking pageview + funnel/utm-sources/daily-visits/abandoned-carts/payment-methods/customer-profile/sales-summary all 200, object storage upload→serve→list→delete, RBAC (non-admin → 401/403 on /lots, /coupons, /leaders, /emails, /uploads, /orders-actions). Also manual-verified: GET /api/me/credentials/{code}/pdf returns 200 application/pdf for owner and 404 for non-owner; GET /api/me/leader returns 404 for non-leader. Fixed 1 backend bug (see rca). v1 backend_test.py is now stale (relies on ticket.price which moved to lots).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/orders-actions/{order_id}/resend-email", "issue": "FIXED — was returning 500 because _send_one_credential_email() did not return the dict from send_credential_email(); admin route then called r.get('sent') on None. Added missing `return` in orders_routes.py line 27."},
+      {"endpoint": "POST /api/admin/lots / POST /api/admin/coupons / POST /api/admin/leaders", "issue": "No validation for non-positive price/discount/target_sales — e.g. lot quantity could be 0 or negative which then makes 'remaining' always 0. Consider Pydantic Field(gt=0)."},
+      {"endpoint": "POST /api/admin/coupons", "issue": "When discount_type=percent and discount_value > 100, no clamp. Order accepts it and discount can exceed subtotal (clamped by max(0,...) later but discount value stored is misleading)."},
+      {"endpoint": "GET /api/coupons/validate/{code}", "issue": "Returns 404 for inactive coupon but the request explicitly asked for 'returns 400 on expired or used-up'. Currently expired/used-up paths return 400 but inactive returns 404. Acceptable but spec ambiguous."},
+      {"endpoint": "POST /api/orders", "issue": "Lot availability check counts WAITING orders too — orphan WAITING orders (from failed PagBank) reduce remaining permanently. Consider TTL cleanup or excluding stale WAITING > 24h."},
+      {"endpoint": "POST /api/orders/{id}/simulate-pay", "issue": "Still unauthenticated (only gated by ENABLE_DEV_SIMULATE_PAY env, default true). Same comment as iteration_1 — flag for prod."},
+      {"endpoint": "DELETE /api/admin/leaders/{id}", "issue": "Demotes user back to 'participante' but does NOT reset leader_id on existing orders; orders remain attributed to deleted leader. Cosmetic for reporting."},
+      {"endpoint": "POST /api/admin/emails/send (recipients=all)", "issue": "Loops sequentially via asyncio.to_thread per user — slow for large user bases. Acceptable for MVP."},
+      {"endpoint": "POST /api/auth/forgot-password", "issue": "Always returns 200 (good for no-enum-leak), but no rate limit — a bad actor can spam reset emails. Add per-IP rate limit before prod."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test_v2.py",
+    "/app/test_reports/pytest/v2_results.xml"
+  ],
+  "action_items": [
+    "v1 backend_test.py is outdated — ticket_types no longer carry `price` (it moved to lots) and the v1 ticket CRUD test posts a price field. Either delete /app/backend/tests/backend_test.py (now superseded by backend_test_v2.py) or update it to query lots for price.",
+    "(low) Add Pydantic Field(gt=0) validation on LotCreate.price/quantity, CouponCreate.discount_value (and <=100 for percent), LeaderCreate.target_sales.",
+    "(low) Add rate-limit on /api/auth/forgot-password to prevent abuse.",
+    "(low) Consider TTL or cron to expire stale WAITING orders so they don't permanently block lot availability."
+  ],
+  "critical_code_review_comments": [
+    "BUG (fixed): orders_routes._send_one_credential_email had no return → resend-email endpoint crashed with NoneType.get. One-line fix applied.",
+    "orders_routes.py is 523 lines — borderline; consider splitting admin actions, leader-goal logic, and price-resolve into their own modules.",
+    "_check_leader_goal seeds a courtesy order with leader_id=None — correct, prevents recursive trigger. Good.",
+    "leaders_routes.list_leaders does N+1 queries (users+stats per leader). Fine for <500 leaders but consider $lookup.",
+    "tracking_routes.utm-sources merges by source/medium/campaign but the visits-only branch overwrites with 'visits=N, orders=0, paid=0, revenue=0' even when no matching order group exists — order-only entries with no visits get visits=0, OK; combined keys correctly merge. Good.",
+    "upload_routes.serve_file is unauthenticated by design — needed so <img src> works from email/HTML; just be aware uploaded images are publicly enumerable by file_id (uuid).",
+    "password_reset_routes does not invalidate other active sessions after reset — a stolen JWT issued before reset remains valid until expiry. Add token-version bump if security-critical.",
+    "email_service logs every send to db.email_logs including failures and skips — great for observability.",
+    "models.OrderCreate: lot_id is Optional but route requires *some* active lot to exist; documented behavior is fine but Pydantic schema could indicate that.",
+    "DELETE /api/admin/lots permanently deletes — should consider soft-delete (is_active=false) so existing orders' lot_id references don't dangle."
+  ],
+  "updated_files": [
+    "/app/backend/routes/orders_routes.py (added missing `return` in _send_one_credential_email)",
+    "/app/backend/tests/backend_test_v2.py (new comprehensive v2 test suite)"
+  ],
+  "success_rate": {"backend": "100% (27/27) on v2 suite + manual verification of /me/credentials/{code}/pdf and /me/leader", "frontend": "skipped per request"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 (from /app/memory/test_credentials.md) — works.",
+  "seed_data_creation": "v2 tests create TEST_-prefixed lots/coupons (cleaned up), users/orders/credentials (intentionally left as seed for frontend testing). One leader (TEST Leader) was promoted with target_sales=2 and reached goal — a COURTESY order + credential exists for that user. Several pageviews with utm_source=google were inserted into db.pageviews.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "v2 backend is solid — all 27 pytest cases green after one-line bug fix in orders_routes._send_one_credential_email. PagBank + Resend remain unconfigured: order creation returns 200 with payment_ready=false and email send returns sent=0 with logs status=skipped (no crashes). Object storage is configured via EMERGENT_LLM_KEY and works (verified by upload→serve roundtrip). Note for next agent: /app/backend/tests/backend_test.py (iteration_1) is now stale (ticket.price removed) — use backend_test_v2.py instead. The auto-courtesy leader-goal flow works end-to-end and is deterministic via /orders/{id}/simulate-pay.",
+  "rca of the issue": "POST /api/admin/orders-actions/{order_id}/resend-email returned 500 with AttributeError: 'NoneType' object has no attribute 'get'. Root cause: helper coroutine `_send_one_credential_email(cred, event)` in /app/backend/routes/orders_routes.py invoked `await send_credential_email(...)` (which returns {sent, id|reason}) but discarded the result — function had no return statement. The admin endpoint did `r = await _send_one_credential_email(...)` then `if r.get('sent')` → crash. Reproduction: create order, PUT /admin/orders-actions/{id}/status to PAID, then POST /admin/orders-actions/{id}/resend-email → 500. Mitigation applied: added `return` before `await send_credential_email(...)` so the helper propagates the dict result up. Test re-run: TestOrdersAdminActions::test_change_status_resend_pdf_courtesy now PASSES with 200 response body {sent: 0, total: 1} (sent=0 expected because Resend API key is intentionally unconfigured)."
+}

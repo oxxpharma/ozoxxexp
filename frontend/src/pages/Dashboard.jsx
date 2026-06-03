@@ -80,9 +80,17 @@ export default function Dashboard() {
                     <div className="flex gap-2 mt-4">
                       <a href={c.qr_png} download={`credencial-${c.credential_code}.png`} className="flex-1">
                         <Button variant="outline" className="w-full border-white/15 text-white" data-testid={`credential-download-${c.credential_code}`}>
-                          <Download className="w-4 h-4 mr-2" /> Baixar
+                          <Download className="w-4 h-4 mr-2" /> PNG
                         </Button>
                       </a>
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-ozx-primary/40 text-ozx-primary"
+                        onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/me/credentials/${c.credential_code}/pdf`, "_blank")}
+                        data-testid={`credential-pdf-${c.credential_code}`}
+                      >
+                        <Download className="w-4 h-4 mr-2" /> PDF
+                      </Button>
                     </div>
                   </div>
                 </motion.div>

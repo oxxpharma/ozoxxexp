@@ -34,7 +34,8 @@ export default function Landing() {
     );
   }
 
-  const { event, appearance, tickets } = config;
+  const { event, appearance, tickets, lots = [], current_lots = {} } = config;
+  const ticketWithLot = (t) => current_lots[t.ticket_type_id] || lots.find((l) => l.ticket_type_id === t.ticket_type_id && l.is_active);
 
   return (
     <div className="min-h-screen bg-ozx-bg text-white relative overflow-x-hidden">
@@ -175,7 +176,9 @@ export default function Landing() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {tickets.map((t, i) => (
+          {tickets.map((t, i) => {
+            const lot = ticketWithLot(t);
+            return (
             <motion.div
               key={t.ticket_type_id}
               initial={{ opacity: 0, y: 30 }}
@@ -185,18 +188,28 @@ export default function Landing() {
               className="relative glass-card rounded-3xl p-8 lg:p-10 group hover:border-ozx-primary/40 transition-all"
               data-testid={`ticket-card-${t.ticket_type_id}`}
             >
-              <div className="absolute top-6 right-6 px-3 py-1 rounded-full bg-ozx-primary/15 border border-ozx-primary/30 text-xs text-ozx-primary tracking-wider uppercase">
-                Edição inaugural
-              </div>
+              {lot && (
+                <div className="absolute top-6 right-6 px-3 py-1 rounded-full bg-ozx-primary/15 border border-ozx-primary/30 text-xs text-ozx-primary tracking-wider uppercase">
+                  {lot.name}
+                </div>
+              )}
               <Music className="w-8 h-8 text-ozx-primary mb-6" />
               <h3 className="font-display text-3xl font-medium mb-2">{t.name}</h3>
               <p className="text-ozx-muted text-sm leading-relaxed mb-6">{t.description}</p>
-              <div className="mb-6">
-                <span className="text-ozx-muted text-sm">a partir de</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="font-display text-5xl font-semibold">R$ {Number(t.price).toFixed(2).replace(".", ",")}</span>
+              {lot ? (
+                <div className="mb-4">
+                  <span className="text-ozx-muted text-sm">a partir de</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-display text-5xl font-semibold">R$ {Number(lot.price).toFixed(2).replace(".", ",")}</span>
+                  </div>
+                  <div className="mt-2 text-xs text-ozx-warning flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-ozx-warning animate-pulse" />
+                    Restam apenas <span className="text-white font-display">{lot.remaining}</span> ingressos neste lote
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-ozx-muted text-sm mb-6">Em breve</p>
+              )}
               <ul className="space-y-2 mb-8">
                 {["Acesso aos 2 dias do evento", "Áreas premium e lounges", "Networking exclusivo", "Credencial digital com QR Code"].map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-ozx-muted">
@@ -212,7 +225,8 @@ export default function Landing() {
                 Comprar Agora <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         <motion.div {...fadeUp} className="mt-12 flex justify-center">

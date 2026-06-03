@@ -162,6 +162,16 @@ async def create_ticket(payload: TicketTypeCreate, user: dict = Depends(admin_on
     return doc
 
 
+@router.put("/users/{user_id}/promote-leader")
+async def promote_to_leader(user_id: str, payload: dict, user: dict = Depends(admin_only)):
+    """Convenience: promote user to leader with default target sales."""
+    from models import LeaderCreate
+    from routes.leaders_routes import create_leader as create_leader_fn
+    target = int(payload.get("target_sales", 10))
+    slug = payload.get("slug")
+    return await create_leader_fn(LeaderCreate(user_id=user_id, target_sales=target, slug=slug), user)
+
+
 @router.put("/tickets/{ticket_type_id}")
 async def update_ticket(ticket_type_id: str, payload: TicketTypeUpdate, user: dict = Depends(admin_only)):
     updates = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
@@ -179,8 +189,7 @@ async def delete_ticket(ticket_type_id: str, user: dict = Depends(admin_only)):
 # ---------- ORDERS ----------
 @router.get("/orders")
 async def list_orders(user: dict = Depends(admin_or_financeiro)):
-    orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return orders
+    return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 
 @router.get("/orders/{order_id}")
@@ -189,6 +198,10 @@ async def get_order_admin(order_id: str, user: dict = Depends(admin_or_financeir
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     credentials = await db.credentials.find({"order_id": order_id}, {"_id": 0}).to_list(10)
+    # Attach QR base64 for admin viewing
+    from services.qrcode_gen import generate_qr_png_base64
+    for c in credentials:
+        c["qr_png"] = generate_qr_png_base64(c["credential_code"])
     order["credentials"] = credentials
     return order
 
@@ -198,22 +211,25 @@ async def get_order_admin(order_id: str, user: dict = Depends(admin_or_financeir
 async def stats(user: dict = Depends(admin_only)):
     total_users = await db.users.count_documents({})
     total_orders = await db.orders.count_documents({})
-    paid_orders = await db.orders.count_documents({"status": "PAID"})
+    paid_orders = await db.orders.count_documents({"status": {"$in": ["PAID", "COURTESY"]}})
     pending_orders = await db.orders.count_documents({"status": {"$in": ["WAITING", "IN_ANALYSIS"]}})
+    declined = await db.orders.count_documents({"status": {"$in": ["DECLINED", "CANCELED"]}})
     total_credentials = await db.credentials.count_documents({})
     checked_in = await db.credentials.count_documents({"checked_in": True})
-
-    # Revenue
-    pipeline = [{"$match": {"status": "PAID"}}, {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}]
+    pipeline = [{"$match": {"status": {"$in": ["PAID", "COURTESY"]}}}, {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}]
     rev = await db.orders.aggregate(pipeline).to_list(1)
     revenue = rev[0]["total"] if rev else 0
-
+    total_leaders = await db.leaders.count_documents({})
+    total_coupons = await db.coupons.count_documents({"is_active": True})
     return {
         "total_users": total_users,
         "total_orders": total_orders,
         "paid_orders": paid_orders,
         "pending_orders": pending_orders,
+        "declined_orders": declined,
         "total_credentials": total_credentials,
         "checked_in": checked_in,
         "revenue": revenue,
+        "total_leaders": total_leaders,
+        "total_coupons": total_coupons,
     }
