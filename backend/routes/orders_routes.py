@@ -158,6 +158,10 @@ async def _resolve_price(payload: OrderCreate) -> dict:
         lot = await db.lots.find_one({"lot_id": payload.lot_id, "is_active": True}, {"_id": 0})
         if not lot:
             raise HTTPException(status_code=404, detail="Lote não encontrado")
+        # check expiration
+        from routes.public_routes import _is_expired
+        if _is_expired(lot.get("valid_until")):
+            raise HTTPException(status_code=400, detail="Lote expirado")
         # check availability
         agg = await db.orders.aggregate([
             {"$match": {"lot_id": payload.lot_id, "status": {"$in": ["PAID", "COURTESY", "WAITING"]}}},
@@ -169,8 +173,11 @@ async def _resolve_price(payload: OrderCreate) -> dict:
             raise HTTPException(status_code=400, detail="Lote esgotado")
         unit_price = lot["price"]
     else:
-        # fallback: use first active lot
-        lot = await db.lots.find_one({"ticket_type_id": ticket["ticket_type_id"], "is_active": True}, {"_id": 0}, sort=[("order", 1)])
+        # fallback: pick first available lot (active + not expired + not sold out)
+        from routes.public_routes import _get_active_lots
+        active = await _get_active_lots()
+        candidates = [l for l in active if l["ticket_type_id"] == ticket["ticket_type_id"] and l["is_available"]]
+        lot = candidates[0] if candidates else None
         if lot:
             unit_price = lot["price"]
         else:

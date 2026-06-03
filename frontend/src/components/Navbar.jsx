@@ -5,10 +5,11 @@ import { useState } from "react";
 import { Menu, X, LogOut, LayoutDashboard, ScanLine, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function Navbar({ logoUrl }) {
+export default function Navbar({ logoUrl, logoSize }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const size = Math.min(80, Math.max(24, Number(logoSize) || 32));
 
   const handleLogout = async () => { await logout(); navigate("/"); };
 
@@ -25,7 +26,7 @@ export default function Navbar({ logoUrl }) {
       <div className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5" data-testid="nav-logo">
           {logoUrl ? (
-            <img src={logoUrl} alt="Ozoxx" className="h-8 w-auto" />
+            <img src={logoUrl} alt="Ozoxx" style={{ height: `${size}px` }} className="w-auto" />
           ) : (
             <div className="flex items-center gap-2">
               <div className="relative">

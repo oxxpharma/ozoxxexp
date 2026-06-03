@@ -39,9 +39,18 @@ export default function Appearance() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="glass-card rounded-3xl p-5">
           <ImageUpload label="Logo" value={data.logo_url} onChange={(v) => set("logo_url", v)} testId="appearance-logo" />
+          <div className="mt-4">
+            <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Tamanho do logo (altura em px)</Label>
+            <Input type="number" min="20" max="80" value={data.logo_size || 32} onChange={(e) => set("logo_size", Number(e.target.value))} className="bg-white/5 border-white/10 text-white" data-testid="appearance-logo-size" />
+            <p className="text-xs text-ozx-muted mt-1">Recomendado entre 28 e 60. Valor atual: {data.logo_size || 32}px</p>
+          </div>
         </div>
         <div className="glass-card rounded-3xl p-5">
-          <ImageUpload label="Imagem hero" value={data.hero_image_url} onChange={(v) => set("hero_image_url", v)} testId="appearance-hero" />
+          <ImageUpload label="Imagem hero (fundo)" value={data.hero_image_url} onChange={(v) => set("hero_image_url", v)} testId="appearance-hero" />
+        </div>
+        <div className="glass-card rounded-3xl p-5 md:col-span-2">
+          <ImageUpload label="Imagem ao lado do título (hero)" value={data.hero_side_image_url} onChange={(v) => set("hero_side_image_url", v)} testId="appearance-hero-side" />
+          <p className="text-xs text-ozx-muted mt-2">Aparece ao lado de "Ozoxx Experience" no topo da landing. Ideal: imagem com fundo transparente (PNG).</p>
         </div>
       </div>
 

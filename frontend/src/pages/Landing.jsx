@@ -39,7 +39,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-ozx-bg text-white relative overflow-x-hidden">
-      <Navbar logoUrl={appearance.logo_url} />
+      <Navbar logoUrl={appearance.logo_url} logoSize={appearance.logo_size} />
 
       {/* HERO */}
       <section className="relative min-h-screen flex items-end pb-24 pt-32 overflow-hidden">
@@ -178,6 +178,10 @@ export default function Landing() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {tickets.map((t, i) => {
             const lot = ticketWithLot(t);
+            // collect all lots for this ticket, sorted by order
+            const ticketLots = lots.filter((l) => l.ticket_type_id === t.ticket_type_id).sort((a, b) => (a.order || 0) - (b.order || 0));
+            const visibleLot = lot || ticketLots[0];
+            const isSoldOut = visibleLot ? !visibleLot.is_available : true;
             return (
             <motion.div
               key={t.ticket_type_id}
@@ -185,27 +189,49 @@ export default function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="relative glass-card rounded-3xl p-8 lg:p-10 group hover:border-ozx-primary/40 transition-all"
+              className={`relative glass-card rounded-3xl p-8 lg:p-10 group transition-all ${isSoldOut ? "opacity-60" : "hover:border-ozx-primary/40"}`}
               data-testid={`ticket-card-${t.ticket_type_id}`}
             >
-              {lot && (
-                <div className="absolute top-6 right-6 px-3 py-1 rounded-full bg-ozx-primary/15 border border-ozx-primary/30 text-xs text-ozx-primary tracking-wider uppercase">
-                  {lot.name}
+              {visibleLot && (
+                <div className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs tracking-wider uppercase ${isSoldOut ? "bg-white/10 border border-white/20 text-ozx-muted" : "bg-ozx-primary/15 border border-ozx-primary/30 text-ozx-primary"}`}>
+                  {visibleLot.name}
                 </div>
               )}
-              <Music className="w-8 h-8 text-ozx-primary mb-6" />
+              <Music className={`w-8 h-8 mb-6 ${isSoldOut ? "text-ozx-muted" : "text-ozx-primary"}`} />
               <h3 className="font-display text-3xl font-medium mb-2">{t.name}</h3>
               <p className="text-ozx-muted text-sm leading-relaxed mb-6">{t.description}</p>
-              {lot ? (
+              {visibleLot ? (
                 <div className="mb-4">
-                  <span className="text-ozx-muted text-sm">a partir de</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-5xl font-semibold">R$ {Number(lot.price).toFixed(2).replace(".", ",")}</span>
-                  </div>
-                  <div className="mt-2 text-xs text-ozx-warning flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-ozx-warning animate-pulse" />
-                    Restam apenas <span className="text-white font-display">{lot.remaining}</span> ingressos neste lote
-                  </div>
+                  {isSoldOut ? (
+                    <div className="mb-2">
+                      <span className="font-display text-4xl font-semibold text-ozx-muted line-through">R$ {Number(visibleLot.price).toFixed(2).replace(".", ",")}</span>
+                      <p className="font-display text-3xl text-ozx-danger mt-1">ESGOTADO</p>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-ozx-muted text-sm">a partir de</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-display text-5xl font-semibold">R$ {Number(visibleLot.price).toFixed(2).replace(".", ",")}</span>
+                      </div>
+                    </>
+                  )}
+                  {!isSoldOut && (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-ozx-warning flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-ozx-warning animate-pulse" />
+                          {visibleLot.progress_pct}% vendidos
+                        </span>
+                        <span className="text-ozx-muted">{visibleLot.remaining}/{visibleLot.quantity}</span>
+                      </div>
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-ozx-warning to-ozx-danger" style={{ width: `${Math.min(100, visibleLot.progress_pct)}%` }} />
+                      </div>
+                    </div>
+                  )}
+                  {visibleLot.valid_until && !isSoldOut && (
+                    <p className="text-xs text-ozx-muted mt-2">Válido até {new Date(visibleLot.valid_until).toLocaleDateString("pt-BR")}</p>
+                  )}
                 </div>
               ) : (
                 <p className="text-ozx-muted text-sm mb-6">Em breve</p>
@@ -213,16 +239,17 @@ export default function Landing() {
               <ul className="space-y-2 mb-8">
                 {["Acesso aos 2 dias do evento", "Áreas premium e lounges", "Networking exclusivo", "Credencial digital com QR Code"].map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-ozx-muted">
-                    <Zap className="w-3.5 h-3.5 text-ozx-primary" /> {f}
+                    <Zap className={`w-3.5 h-3.5 ${isSoldOut ? "text-ozx-muted" : "text-ozx-primary"}`} /> {f}
                   </li>
                 ))}
               </ul>
               <Button
                 onClick={() => navigate(`/checkout?ticket=${t.ticket_type_id}`)}
-                className="w-full bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full py-6"
+                disabled={isSoldOut}
+                className={`w-full font-semibold rounded-full py-6 ${isSoldOut ? "bg-white/10 text-ozx-muted cursor-not-allowed" : "bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg"}`}
                 data-testid={`ticket-buy-${t.ticket_type_id}`}
               >
-                Comprar Agora <ArrowRight className="w-4 h-4 ml-2" />
+                {isSoldOut ? "Esgotado" : <>Comprar Agora <ArrowRight className="w-4 h-4 ml-2" /></>}
               </Button>
             </motion.div>
             );

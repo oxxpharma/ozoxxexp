@@ -87,6 +87,8 @@ class EventConfig(BaseModel):
 
 class AppearanceConfig(BaseModel):
     logo_url: Optional[str] = ""
+    logo_size: int = 32  # height in pixels (px)
+    hero_side_image_url: Optional[str] = ""  # image rendered next to the hero title
     primary_color: str = "#28b9fc"
     secondary_color: str = "#18245a"
     background_color: str = "#070b1e"
@@ -122,6 +124,7 @@ class LotCreate(BaseModel):
     name: str  # "1º Lote", "2º Lote", "VIP", "Founders"
     price: float
     quantity: int
+    valid_until: Optional[str] = None  # ISO date — lot expires after this
     order: int = 0  # ordering (1st, 2nd, etc)
     is_active: bool = True
 
@@ -130,6 +133,7 @@ class LotUpdate(BaseModel):
     name: Optional[str] = None
     price: Optional[float] = None
     quantity: Optional[int] = None
+    valid_until: Optional[str] = None
     order: Optional[int] = None
     is_active: Optional[bool] = None
 

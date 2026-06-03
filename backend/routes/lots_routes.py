@@ -9,17 +9,18 @@ router = APIRouter(prefix="/api/admin/lots", tags=["lots"])
 
 @router.get("")
 async def list_lots(user: dict = Depends(require_roles(["admin", "comercial", "financeiro"]))):
+    from routes.public_routes import _is_expired
     lots = await db.lots.find({}, {"_id": 0}).sort("order", 1).to_list(500)
-    # Compute sold count per lot
     for lot in lots:
-        sold = await db.orders.count_documents({"lot_id": lot["lot_id"], "status": {"$in": ["PAID", "COURTESY"]}})
-        # Each order may have 1 or 2 tickets
         agg = await db.orders.aggregate([
             {"$match": {"lot_id": lot["lot_id"], "status": {"$in": ["PAID", "COURTESY"]}}},
             {"$group": {"_id": None, "qty": {"$sum": "$quantity"}}},
         ]).to_list(1)
         lot["sold_qty"] = agg[0]["qty"] if agg else 0
         lot["remaining"] = max(0, lot["quantity"] - lot["sold_qty"])
+        lot["progress_pct"] = round(min(100, (lot["sold_qty"] / lot["quantity"]) * 100), 1) if lot["quantity"] > 0 else 0
+        lot["is_sold_out"] = lot["remaining"] <= 0
+        lot["is_expired"] = _is_expired(lot.get("valid_until"))
     return lots
 
 

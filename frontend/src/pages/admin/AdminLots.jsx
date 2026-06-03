@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit3, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { ticket_type_id: "", name: "", price: 0, quantity: 100, order: 1, is_active: true };
+const empty = { ticket_type_id: "", name: "", price: 0, quantity: 100, valid_until: "", order: 1, is_active: true };
 
 export default function AdminLots() {
   const [items, setItems] = useState([]);
@@ -26,6 +26,7 @@ export default function AdminLots() {
 
   const submit = async () => {
     const body = { ...form, price: Number(form.price), quantity: Number(form.quantity), order: Number(form.order) };
+    if (!body.valid_until) body.valid_until = null;
     try {
       if (editing) await api.put(`/admin/lots/${editing}`, body);
       else await api.post("/admin/lots", body);
@@ -34,7 +35,7 @@ export default function AdminLots() {
     } catch (e) { toast.error("Erro"); }
   };
   const del = async (id) => { if (!confirm("Deletar lote?")) return; await api.delete(`/admin/lots/${id}`); load(); };
-  const edit = (l) => { setForm({ ticket_type_id: l.ticket_type_id, name: l.name, price: l.price, quantity: l.quantity, order: l.order, is_active: l.is_active }); setEditing(l.lot_id); setOpen(true); };
+  const edit = (l) => { setForm({ ticket_type_id: l.ticket_type_id, name: l.name, price: l.price, quantity: l.quantity, valid_until: l.valid_until || "", order: l.order, is_active: l.is_active }); setEditing(l.lot_id); setOpen(true); };
 
   return (
     <div>
@@ -78,6 +79,11 @@ export default function AdminLots() {
                   <Input type="number" value={form.order} onChange={(e) => setForm({ ...form, order: e.target.value })} className="bg-white/5 border-white/10 text-white" />
                 </div>
               </div>
+              <div>
+                <Label className="text-xs uppercase text-ozx-muted">Data limite (lote expira após)</Label>
+                <Input type="datetime-local" value={form.valid_until ? form.valid_until.slice(0, 16) : ""} onChange={(e) => setForm({ ...form, valid_until: e.target.value ? `${e.target.value}:00-03:00` : "" })} className="bg-white/5 border-white/10 text-white" data-testid="lot-form-valid-until" />
+                <p className="text-xs text-ozx-muted mt-1">Deixe vazio para sem data limite. O lote ficará "Encerrado" após esta data, mesmo com vagas.</p>
+              </div>
               <div className="flex items-center justify-between"><Label>Ativo</Label><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /></div>
               <Button onClick={submit} className="w-full bg-ozx-primary text-ozx-bg" data-testid="lot-form-save">Salvar</Button>
             </div>
@@ -88,13 +94,20 @@ export default function AdminLots() {
       <div className="space-y-3">
         {items.map((l) => {
           const ticket = tickets.find((t) => t.ticket_type_id === l.ticket_type_id);
-          const pct = l.quantity ? (l.sold_qty / l.quantity) * 100 : 0;
+          const pct = l.progress_pct || 0;
+          const statusLabel = l.is_sold_out ? "ESGOTADO" : l.is_expired ? "ENCERRADO" : (!l.is_active ? "INATIVO" : null);
           return (
-            <div key={l.lot_id} className="glass-card rounded-2xl p-5" data-testid={`lot-row-${l.lot_id}`}>
+            <div key={l.lot_id} className={`glass-card rounded-2xl p-5 ${(l.is_sold_out || l.is_expired || !l.is_active) ? "opacity-60" : ""}`} data-testid={`lot-row-${l.lot_id}`}>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="font-display text-lg">{l.name} {!l.is_active && <span className="text-xs text-ozx-muted ml-2">(inativo)</span>}</p>
-                  <p className="text-xs text-ozx-muted">{ticket?.name} · R$ {Number(l.price).toFixed(2)} · {l.sold_qty}/{l.quantity} vendidos</p>
+                  <p className="font-display text-lg">
+                    {l.name}
+                    {statusLabel && <span className="text-xs px-2 py-0.5 ml-2 rounded-full bg-ozx-danger/15 text-ozx-danger">{statusLabel}</span>}
+                  </p>
+                  <p className="text-xs text-ozx-muted">
+                    {ticket?.name} · R$ {Number(l.price).toFixed(2)} · {l.sold_qty}/{l.quantity} ({pct}% vendidos)
+                    {l.valid_until && ` · até ${new Date(l.valid_until).toLocaleDateString("pt-BR")}`}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="border-white/15" onClick={() => edit(l)}><Edit3 className="w-3.5 h-3.5" /></Button>

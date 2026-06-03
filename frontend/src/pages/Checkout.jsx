@@ -41,9 +41,12 @@ export default function Checkout() {
   }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (selectedTicket) {
-      const ticketLots = lots.filter((l) => l.ticket_type_id === selectedTicket && l.is_active && l.remaining > 0);
-      if (ticketLots.length && !selectedLot) setSelectedLot(ticketLots[0].lot_id);
+    if (selectedTicket && lots.length) {
+      const ticketLots = lots.filter((l) => l.ticket_type_id === selectedTicket && l.is_active);
+      const firstAvailable = ticketLots.find((l) => l.is_available);
+      if (firstAvailable && (!selectedLot || !lots.find((l) => l.lot_id === selectedLot)?.is_available)) {
+        setSelectedLot(firstAvailable.lot_id);
+      }
     }
   }, [selectedTicket, lots]); // eslint-disable-line
 
@@ -96,7 +99,8 @@ export default function Checkout() {
     finally { setLoading(false); }
   };
 
-  const availableLots = lots.filter((l) => l.ticket_type_id === selectedTicket && l.is_active && l.remaining > 0);
+  const availableLots = lots.filter((l) => l.ticket_type_id === selectedTicket && l.is_active && l.is_available);
+  const allLotsForTicket = lots.filter((l) => l.ticket_type_id === selectedTicket && l.is_active).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   return (
     <div className="min-h-screen bg-ozx-bg">
@@ -122,15 +126,27 @@ export default function Checkout() {
               </RadioGroup>
               <p className="text-xs uppercase tracking-wider text-ozx-muted mb-2">Lote</p>
               <RadioGroup value={selectedLot} onValueChange={setSelectedLot} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {availableLots.map((l) => (
-                  <label key={l.lot_id} className={`p-4 rounded-2xl border cursor-pointer transition ${selectedLot === l.lot_id ? "border-ozx-primary bg-ozx-primary/5" : "border-white/10 hover:border-white/20"}`}>
-                    <RadioGroupItem value={l.lot_id} data-testid={`checkout-lot-${l.lot_id}`} />
+                {allLotsForTicket.map((l) => {
+                  const unavailable = !l.is_available;
+                  return (
+                  <label key={l.lot_id} className={`p-4 rounded-2xl border transition relative ${unavailable ? "opacity-50 cursor-not-allowed border-white/5 bg-white/5" : selectedLot === l.lot_id ? "border-ozx-primary bg-ozx-primary/5 cursor-pointer" : "border-white/10 hover:border-white/20 cursor-pointer"}`}>
+                    <RadioGroupItem value={l.lot_id} disabled={unavailable} data-testid={`checkout-lot-${l.lot_id}`} />
                     <p className="font-display mt-2">{l.name}</p>
-                    <p className="font-display text-2xl">R$ {Number(l.price).toFixed(2).replace(".", ",")}</p>
-                    <p className="text-xs text-ozx-muted mt-1">{l.remaining} restantes</p>
+                    {unavailable ? (
+                      <>
+                        <p className="font-display text-xl text-ozx-muted line-through">R$ {Number(l.price).toFixed(2).replace(".", ",")}</p>
+                        <p className="text-xs text-ozx-danger mt-1">{l.is_sold_out ? "Esgotado" : "Encerrado"}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-display text-2xl">R$ {Number(l.price).toFixed(2).replace(".", ",")}</p>
+                        <p className="text-xs text-ozx-muted mt-1">{l.progress_pct}% vendidos</p>
+                      </>
+                    )}
                   </label>
-                ))}
-                {availableLots.length === 0 && <p className="text-sm text-ozx-muted col-span-3">Nenhum lote disponível.</p>}
+                  );
+                })}
+                {allLotsForTicket.length === 0 && <p className="text-sm text-ozx-muted col-span-3">Nenhum lote configurado.</p>}
               </RadioGroup>
             </div>
 
