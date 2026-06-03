@@ -9,6 +9,7 @@ import { Switch } from "../../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
 import { Plus, Mail, Edit3, Eye, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { statusLabel, methodLabel } from "../../lib/labels";
 
 const STATUSES = ["WAITING", "PAID", "IN_ANALYSIS", "DECLINED", "CANCELED", "REFUNDED", "COURTESY"];
 
@@ -121,7 +122,7 @@ export default function AdminOrders() {
           <SelectTrigger className="bg-white/5 border-white/10 text-white max-w-xs"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-ozx-bg2 text-white border-white/10">
             <SelectItem value="all">Todos status</SelectItem>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -144,7 +145,7 @@ export default function AdminOrders() {
                     o.status === "COURTESY" ? "bg-ozx-primary/15 text-ozx-primary" :
                     o.status === "WAITING" ? "bg-ozx-warning/15 text-ozx-warning" :
                     "bg-ozx-danger/15 text-ozx-danger"
-                  }`}>{o.status}</span>
+                  }`}>{statusLabel(o.status)}</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-ozx-muted">{new Date(o.created_at).toLocaleString("pt-BR")}</td>
               </tr>
@@ -165,7 +166,7 @@ export default function AdminOrders() {
                 <div><p className="text-ozx-muted text-xs uppercase">CPF</p><p>{selected.holder_cpf || "—"}</p></div>
                 <div><p className="text-ozx-muted text-xs uppercase">Telefone</p><p>{selected.holder_phone || "—"}</p></div>
                 <div><p className="text-ozx-muted text-xs uppercase">Total</p><p>R$ {Number(selected.total_amount).toFixed(2)}</p></div>
-                <div><p className="text-ozx-muted text-xs uppercase">Pagamento</p><p>{selected.payment_method}</p></div>
+                <div><p className="text-ozx-muted text-xs uppercase">Pagamento</p><p>{methodLabel(selected.payment_method)}</p></div>
                 {selected.coupon_code && <div><p className="text-ozx-muted text-xs uppercase">Cupom</p><p>{selected.coupon_code} (-R$ {Number(selected.discount || 0).toFixed(2)})</p></div>}
                 {selected.utm?.utm_source && <div className="col-span-2"><p className="text-ozx-muted text-xs uppercase">UTM</p><p>{selected.utm.utm_source} · {selected.utm.utm_medium} · {selected.utm.utm_campaign || "—"}</p></div>}
               </div>
@@ -183,7 +184,7 @@ export default function AdminOrders() {
                   <Select value={selected.status} onValueChange={changeStatus}>
                     <SelectTrigger className="bg-white/5 border-white/10 text-white max-w-xs" data-testid="order-status-select"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-ozx-bg2 text-white border-white/10">
-                      {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Button onClick={resendEmail} variant="outline" className="border-white/15" data-testid="order-resend-email"><Mail className="w-4 h-4 mr-2" /> Reenviar e-mail</Button>

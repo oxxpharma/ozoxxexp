@@ -3,6 +3,7 @@ import api from "../../lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Button } from "../../components/ui/button";
 import { Download } from "lucide-react";
+import { statusLabel, methodLabel, genderLabel } from "../../lib/labels";
 
 function downloadCSV(filename, rows) {
   if (!rows.length) return;
@@ -52,7 +53,7 @@ export default function AdminReports() {
               <h3 className="font-display text-xl mb-4">Por status</h3>
               {sales?.by_status?.map((s) => (
                 <div key={s._id} className="flex justify-between py-2 border-b border-white/5 text-sm">
-                  <span>{s._id}</span><span className="text-ozx-primary">{s.count} · R$ {Number(s.total).toFixed(2)}</span>
+                  <span>{statusLabel(s._id)}</span><span className="text-ozx-primary">{s.count} · R$ {Number(s.total).toFixed(2)}</span>
                 </div>
               )) || <p className="text-ozx-muted text-sm">Carregando...</p>}
             </div>
@@ -92,7 +93,7 @@ export default function AdminReports() {
             <h3 className="font-display text-xl mb-4">Métodos de pagamento</h3>
             {methods.map((m) => (
               <div key={m.method} className="flex justify-between py-2 border-b border-white/5 text-sm">
-                <span className="capitalize">{m.method.replace("_", " ")}</span>
+                <span>{methodLabel(m.method)}</span>
                 <span><span className="text-ozx-muted">{m.count} pedidos · </span><span className="text-ozx-success">{m.paid} pagos</span></span>
               </div>
             ))}
@@ -104,7 +105,7 @@ export default function AdminReports() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="glass-card rounded-3xl p-6">
                 <h3 className="font-display text-lg mb-4">Sexo</h3>
-                {profile.by_gender.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{r._id}</span><span className="text-ozx-primary">{r.count}</span></div>)}
+                {profile.by_gender.map((r) => <div key={r._id} className="flex justify-between py-1.5 text-sm border-b border-white/5"><span>{genderLabel(r._id)}</span><span className="text-ozx-primary">{r.count}</span></div>)}
               </div>
               <div className="glass-card rounded-3xl p-6">
                 <h3 className="font-display text-lg mb-4">Estados</h3>

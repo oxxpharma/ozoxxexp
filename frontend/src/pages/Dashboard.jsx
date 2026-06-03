@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Download, Sparkles, QrCode, AlertCircle, RefreshCw, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { statusLabel } from "../lib/labels";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -117,8 +118,8 @@ export default function Dashboard() {
                       o.status === "PAID" ? "bg-ozx-success/15 text-ozx-success" :
                       o.status === "WAITING" ? "bg-ozx-warning/15 text-ozx-warning" :
                       "bg-ozx-danger/15 text-ozx-danger"
-                    }`}>{o.status}</span>
-                    {o.status !== "PAID" && (
+                    }`}>{statusLabel(o.status)}</span>
+                    {o.status !== "PAID" && o.status !== "COURTESY" && (
                       <Button size="sm" variant="outline" className="border-white/15" onClick={() => navigate(`/payment/${o.order_id}`)}>
                         <RefreshCw className="w-3.5 h-3.5 mr-1" /> Retomar
                       </Button>

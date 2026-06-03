@@ -58,10 +58,10 @@ async def utm_sources(user: dict = Depends(require_roles(["admin", "comercial"])
     # merge
     result = {}
     for g in visit_groups:
-        key = (g["_id"].get("source") or "(direct)", g["_id"].get("medium") or "", g["_id"].get("campaign") or "")
+        key = (g["_id"].get("source") or "Direto", g["_id"].get("medium") or "", g["_id"].get("campaign") or "")
         result[key] = {"source": key[0], "medium": key[1], "campaign": key[2], "visits": g["visits"], "orders": 0, "paid": 0, "revenue": 0}
     for g in order_groups:
-        key = (g["_id"].get("source") or "(direct)", g["_id"].get("medium") or "", g["_id"].get("campaign") or "")
+        key = (g["_id"].get("source") or "Direto", g["_id"].get("medium") or "", g["_id"].get("campaign") or "")
         if key not in result:
             result[key] = {"source": key[0], "medium": key[1], "campaign": key[2], "visits": 0, "orders": 0, "paid": 0, "revenue": 0}
         result[key]["orders"] = g["orders"]

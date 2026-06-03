@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../lib/api";
 import { Users, ShoppingCart, CheckCircle2, Clock, TrendingUp, Ticket, XCircle, Award, Tag, Eye } from "lucide-react";
 import { motion } from "framer-motion";
+import { methodLabel } from "../../lib/labels";
 
 const cards = [
   { key: "total_users", label: "Usuários", icon: Users },
@@ -108,7 +109,7 @@ export default function Overview() {
               {utm.slice(0, 8).map((u, i) => (
                 <div key={i} className="flex items-center justify-between text-sm border-b border-white/5 pb-2">
                   <div>
-                    <p className="text-white">{u.source} {u.medium && <span className="text-ozx-muted text-xs">· {u.medium}</span>}</p>
+                    <p className="text-white">{u.source || "Direto"} {u.medium && <span className="text-ozx-muted text-xs">· {u.medium}</span>}</p>
                     {u.campaign && <p className="text-xs text-ozx-muted">{u.campaign}</p>}
                   </div>
                   <div className="text-right text-xs">
@@ -128,7 +129,7 @@ export default function Overview() {
             <div className="space-y-3">
               {methods.map((m) => (
                 <div key={m.method} className="flex items-center justify-between">
-                  <p className="capitalize text-sm">{m.method.replace("_", " ")}</p>
+                  <p className="text-sm">{methodLabel(m.method)}</p>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-ozx-muted">{m.count} pedidos</span>
                     <span className="text-ozx-success">·</span>

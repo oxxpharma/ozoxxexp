@@ -8,6 +8,7 @@ import { Switch } from "../../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
 import { Plus, Edit3, Trash2, Award } from "lucide-react";
 import { toast } from "sonner";
+import { roleLabel } from "../../lib/labels";
 
 const ROLES = ["admin", "comercial", "financeiro", "credenciadora", "lider", "participante"];
 const empty = { name: "", email: "", password: "", role: "participante", phone: "", cpf: "", birth_date: "", gender: "", city: "", state: "", active: true };
@@ -78,7 +79,7 @@ export default function AdminUsers() {
                 <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                   <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="user-form-role"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-ozx-bg2 text-white border-white/10">
-                    {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {ROLES.map((r) => <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -134,7 +135,7 @@ export default function AdminUsers() {
           <SelectTrigger className="bg-white/5 border-white/10 text-white max-w-xs"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-ozx-bg2 text-white border-white/10">
             <SelectItem value="all">Todas funções</SelectItem>
-            {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            {ROLES.map((r) => <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -150,7 +151,7 @@ export default function AdminUsers() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs px-2 py-1 rounded-full bg-ozx-primary/10 border border-ozx-primary/20 text-ozx-primary uppercase tracking-wider">{u.role}</span>
+              <span className="text-xs px-2 py-1 rounded-full bg-ozx-primary/10 border border-ozx-primary/20 text-ozx-primary uppercase tracking-wider">{roleLabel(u.role)}</span>
               {u.active === false && <span className="text-xs text-ozx-danger">inativo</span>}
               {u.role !== "admin" && u.role !== "lider" && (
                 <Button size="sm" variant="outline" className="border-ozx-primary/40 text-ozx-primary" onClick={() => promote(u)} data-testid={`promote-leader-${u.email}`}><Award className="w-3.5 h-3.5" /></Button>
