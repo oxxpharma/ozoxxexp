@@ -1,0 +1,42 @@
+{
+  "summary": "Comprehensive backend testing of Ozoxx Experience MVP completed. 41/41 pytest tests passed covering: public config, JWT auth (login/register/me), admin appearance/event/tickets/users/integrations/stats CRUD, order creation (guest + companion), simulate-pay credential generation, retry, scanner role-gated validate + already-checked-in flow, /api/me/credentials with QR base64, public credential lookup, and RBAC (non-admin -> 403). PagBank gracefully returns success=false when keys empty (200 not 500). Resend gracefully returns 'API key não configurada' when empty. Retry against unconfigured PagBank correctly returns 502.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/register & /api/admin/users", "issue": "Backend silently lowercases the email on store but uses EmailStr that accepts mixed case — this is acceptable behavior but tests had to compare against lowercase. Not a bug, just behavior to document."},
+      {"endpoint": "/api/orders (guest)", "issue": "Guest order is created BEFORE PagBank integration is attempted; if PagBank fails (e.g., empty creds), an orphan WAITING order remains in DB. Consider deleting/marking failed when payment_ready=false, or returning 400 instead of a 200 with payment_error. Currently returns 200 with payment_ready=false which is a UX trade-off."},
+      {"endpoint": "/api/orders/{id}/simulate-pay", "issue": "Dev helper has NO auth — anyone can mark any order PAID. Acceptable for MVP/dev but should be gated by env flag or admin role before production."},
+      {"endpoint": "/api/orders/{id}/refresh-status and /api/orders/{id} (GET)", "issue": "Both unauthenticated — leak order info (including holder PII) by order_id. Consider scoping to owner or admin/financeiro."},
+      {"endpoint": "/api/credentials/public/{code}", "issue": "Excludes email but returns full credential incl. holder name, ticket name, checked_in status — that's by design as a public lookup, but make sure code is unguessable (12 hex chars looks fine)."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(optional) Auth-gate /api/orders/{id}/simulate-pay behind an ENV flag (e.g., ENABLE_DEV_SIMULATE_PAY=true) or admin role before production.",
+    "(optional) Restrict GET /api/orders/{id} and /refresh-status to the owning user / admin / financeiro to avoid leaking PII by order_id enumeration.",
+    "(optional) When PagBank fails on POST /api/orders, decide whether to (a) delete the orphan order, (b) return 502 instead of 200 with payment_error, or (c) document the current behavior — current behavior is 200 with payment_ready=false."
+  ],
+  "critical_code_review_comments": [
+    "CORS uses allow_origin_regex='.*' with allow_credentials=True — browsers will still reject this for cookie-bearing requests from cross-origin in some setups. The Bearer header path works fine and was used by these tests, so functionally OK, but if cookie-based auth is required in prod, set explicit FRONTEND_URL list.",
+    "Cookies are set with secure=True samesite='none' — fine for HTTPS preview but will fail on plain HTTP local dev.",
+    "auth.py seed_admin updates password if it changes — good idempotent behavior matching the playbook.",
+    "bcrypt hashes start with $2b$ (verified via login flow) — playbook compliance OK.",
+    "orders_routes.create_order_endpoint does a manual try/except get_current_user — fine pattern for guest+auth mixed endpoints.",
+    "simulate-pay endpoint is wide-open; flag this before prod.",
+    "scanner_routes.validate_credential correctly: 1) rejects empty code 2) returns valid=false (200) for not_found / unpaid / already_checked_in 3) marks checked_in atomically. Good UX.",
+    "/api/me/credentials joins by user_id OR email — handles guest-then-registered flow well.",
+    "models.py: OrderCreate's companion is Optional but validation done in route — could use Pydantic root_validator for cleaner errors."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (41/41)", "frontend": "not tested (skipped per request)"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 (admin role) — works as documented in /app/memory/test_credentials.md",
+  "seed_data_creation": "Tests create transient ticket types (test_*), users (test_user_*, test_cred_*), orders (test_guest/test_retry/companion). A best-effort module-scope cleanup fixture deletes test_-prefixed users. Orders/credentials/tickets created during tests are intentionally NOT cleaned up since they're useful as seed for further frontend testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is fully functional and ready for frontend integration testing. PagBank and Resend are intentionally unconfigured — admin can configure them via PUT /api/admin/integrations to enable real payment + email. simulate-pay dev helper is available for end-to-end credential generation without real payment. Bearer token auth via Authorization header works reliably across all role-gated endpoints. Note: tests create a paid order with companion tied to a participant user (by email) so /api/me/credentials returns 2 credentials including QR base64.",
+  "rca of the issue": "N/A — no production bugs found. Only initial test failures were due to test asserting against the originally-cased email while backend lowercases on store; fixed by using lowercase test_ prefix in test data."
+}

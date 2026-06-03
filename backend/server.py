@@ -1,89 +1,97 @@
-from fastapi import FastAPI, APIRouter
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
-
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / ".env")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+import os
+import logging
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
-# Create the main app without a prefix
-app = FastAPI()
+from db import db
+from auth import seed_admin
+from models import EventConfig, AppearanceConfig, IntegrationsConfig, gen_id, now_iso
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+from routes.auth_routes import router as auth_router
+from routes.admin_routes import router as admin_router
+from routes.public_routes import router as public_router
+from routes.orders_routes import router as orders_router
+from routes.scanner_routes import router as scanner_router
+from routes.webhook_routes import router as webhook_router
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+app = FastAPI(title="Ozoxx Experience API")
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
+@app.get("/api/")
 async def root():
-    return {"message": "Hello World"}
+    return {"ok": True, "service": "Ozoxx Experience API"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
+app.include_router(auth_router)
+app.include_router(admin_router)
+app.include_router(public_router)
+app.include_router(orders_router)
+app.include_router(scanner_router)
+app.include_router(webhook_router)
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origin_regex=".*",
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Note: when allow_credentials=True with cookies and SameSite=None, browsers reject "*".
+# Our frontend uses Authorization Bearer header fallback too, so withCredentials cookies work
+# only when same origin or when FRONTEND_URL is set explicitly. We accept this trade-off.
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
+@app.on_event("startup")
+async def on_startup():
+    # Indexes
+    await db.users.create_index("email", unique=True)
+    await db.users.create_index("user_id", unique=True)
+    await db.orders.create_index("order_id", unique=True)
+    await db.orders.create_index("user_id")
+    await db.credentials.create_index("credential_code", unique=True)
+    await db.credentials.create_index("order_id")
+    await db.user_sessions.create_index("session_token", unique=True)
+    await db.ticket_types.create_index("ticket_type_id", unique=True)
+
+    # Seed admin
+    await seed_admin()
+
+    # Default settings
+    if not await db.app_settings.find_one({"_id": "event"}):
+        await db.app_settings.insert_one({"_id": "event", **EventConfig().model_dump()})
+    if not await db.app_settings.find_one({"_id": "appearance"}):
+        await db.app_settings.insert_one({"_id": "appearance", **AppearanceConfig().model_dump()})
+    if not await db.app_settings.find_one({"_id": "integrations"}):
+        await db.app_settings.insert_one({"_id": "integrations", **IntegrationsConfig().model_dump()})
+
+    # Default ticket type
+    if await db.ticket_types.count_documents({}) == 0:
+        await db.ticket_types.insert_one({
+            "ticket_type_id": gen_id("tkt"),
+            "name": "Passaporte Ozoxx",
+            "description": "Acesso completo aos 2 dias do evento, com áreas premium, networking lounge e shows exclusivos.",
+            "price": 890.00,
+            "quantity_available": 500,
+            "is_active": True,
+            "created_at": now_iso(),
+        })
+
+    logger.info("Ozoxx backend startup complete")
+
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def on_shutdown():
+    from db import client
     client.close()

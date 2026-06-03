@@ -1,55 +1,61 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Toaster } from "sonner";
+import { AuthProvider } from "./contexts/AuthContext";
+import Protected from "./components/Protected";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import AuthCallback from "./pages/AuthCallback";
+import Checkout from "./pages/Checkout";
+import Payment from "./pages/Payment";
+import Dashboard from "./pages/Dashboard";
+import Scanner from "./pages/Scanner";
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+import AdminLayout from "./pages/admin/AdminLayout";
+import Overview from "./pages/admin/Overview";
+import Appearance from "./pages/admin/Appearance";
+import EventConfig from "./pages/admin/EventConfig";
+import AdminTickets from "./pages/admin/AdminTickets";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminOrders from "./pages/admin/AdminOrders";
+import Integrations from "./pages/admin/Integrations";
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+function AppRouter() {
+  const location = useLocation();
+  if (location.hash?.includes("session_id=")) {
+    return <AuthCallback />;
+  }
   return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/payment/:orderId" element={<Payment />} />
+      <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+      <Route path="/scanner" element={<Protected roles={["admin", "credenciadora"]}><Scanner /></Protected>} />
+      <Route path="/admin" element={<Protected roles={["admin"]}><AdminLayout /></Protected>}>
+        <Route index element={<Overview />} />
+        <Route path="appearance" element={<Appearance />} />
+        <Route path="event" element={<EventConfig />} />
+        <Route path="tickets" element={<AdminTickets />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="orders" element={<AdminOrders />} />
+        <Route path="integrations" element={<Integrations />} />
+      </Route>
+    </Routes>
   );
-};
+}
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRouter />
+        <Toaster position="top-right" theme="dark" toastOptions={{ style: { background: "#0a0c1a", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" } }} />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
