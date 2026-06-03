@@ -50,6 +50,7 @@ export default function Landing() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 lg:gap-16 items-end">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -85,6 +86,40 @@ export default function Landing() {
               <AddToCalendar event={event} />
             </div>
           </motion.div>
+
+          {appearance.hero_side_image_url && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 1.1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="relative hidden lg:block"
+            >
+              <div className="absolute -inset-6 bg-ozx-primary/20 blur-3xl rounded-full" />
+              <img
+                src={appearance.hero_side_image_url}
+                alt=""
+                className="relative w-[320px] xl:w-[420px] h-auto rounded-3xl border border-white/10 shadow-2xl glow-primary"
+                data-testid="hero-side-image"
+              />
+            </motion.div>
+          )}
+
+          {appearance.hero_side_image_url && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.9, delay: 0.4 }}
+              className="lg:hidden -mt-4 mb-4"
+            >
+              <img
+                src={appearance.hero_side_image_url}
+                alt=""
+                className="w-48 sm:w-64 h-auto rounded-2xl border border-white/10 shadow-2xl glow-primary"
+                data-testid="hero-side-image-mobile"
+              />
+            </motion.div>
+          )}
+          </div>
         </div>
       </section>
 
