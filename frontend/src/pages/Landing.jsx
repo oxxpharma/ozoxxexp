@@ -35,7 +35,7 @@ export default function Landing() {
     );
   }
 
-  const { event, appearance, tickets, lots = [], current_lots = {} } = config;
+  const { event, appearance, tickets, lots = [], current_lots = {}, speakers = [] } = config;
   const ticketWithLot = (t) => current_lots[t.ticket_type_id] || lots.find((l) => l.ticket_type_id === t.ticket_type_id && l.is_active);
 
   return (
@@ -218,8 +218,8 @@ export default function Landing() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6">
           <motion.div {...fadeUp} className="md:col-span-7 glass-card rounded-3xl p-8 lg:p-10 relative overflow-hidden">
             <Sparkles className="w-8 h-8 text-ozx-primary mb-6" />
-            <h3 className="font-display text-3xl font-medium mb-3">Programação imersiva</h3>
-            <p className="text-ozx-muted leading-relaxed">Shows, palestras, painéis exclusivos, lounges premium e ativações de marca cuidadosamente curadas. Cada minuto pensado para você.</p>
+            <h3 className="font-display text-3xl font-medium mb-3" data-testid="about-card1-title">{appearance.about_card1_title || "Programação imersiva"}</h3>
+            <p className="text-ozx-muted leading-relaxed" data-testid="about-card1-text">{appearance.about_card1_text || "Shows, palestras, painéis exclusivos, lounges premium e ativações de marca cuidadosamente curadas. Cada minuto pensado para você."}</p>
             <div className="absolute -bottom-8 -right-8 h-40 w-40 rounded-full bg-ozx-primary/10 blur-3xl" />
           </motion.div>
 
@@ -239,8 +239,8 @@ export default function Landing() {
 
           <motion.div {...fadeUp} transition={{ duration: 0.8, delay: 0.2 }} className="md:col-span-7 glass-card rounded-3xl p-8 lg:p-10 relative overflow-hidden">
             <Users className="w-8 h-8 text-ozx-primary mb-6" />
-            <h3 className="font-display text-3xl font-medium mb-3">Networking de alto nível</h3>
-            <p className="text-ozx-muted leading-relaxed">Conecte-se com fundadores, criadores e líderes de marca em ambientes pensados para conversas que importam.</p>
+            <h3 className="font-display text-3xl font-medium mb-3" data-testid="about-card2-title">{appearance.about_card2_title || "Networking de alto nível"}</h3>
+            <p className="text-ozx-muted leading-relaxed" data-testid="about-card2-text">{appearance.about_card2_text || "Conecte-se com fundadores, criadores e líderes de marca em ambientes pensados para conversas que importam."}</p>
             <div className="absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-ozx-secondary/30 blur-3xl" />
           </motion.div>
         </div>
@@ -268,6 +268,45 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* SPEAKERS */}
+      {speakers.length > 0 && (
+        <section id="palestrantes" className="py-24 lg:py-32 max-w-7xl mx-auto px-6 lg:px-12">
+          <motion.div {...fadeUp} className="mb-12 text-center max-w-2xl mx-auto">
+            <p className="text-xs uppercase tracking-[0.25em] text-ozx-primary mb-3">Palestrantes</p>
+            <h2 className="font-display text-4xl sm:text-5xl font-medium tracking-tight">Quem sobe no palco</h2>
+            <p className="text-ozx-muted mt-4">Nomes que estão moldando o futuro de marcas, criadores e experiências.</p>
+          </motion.div>
+          <div className="flex flex-wrap justify-center gap-6 lg:gap-8" data-testid="speakers-grid">
+            {speakers.map((s, i) => (
+              <motion.div
+                key={s.speaker_id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.7, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                className="glass-card rounded-3xl p-6 w-full sm:w-[300px] flex flex-col items-center text-center group hover:border-ozx-primary/40 transition-all"
+                data-testid={`speaker-card-${s.speaker_id}`}
+              >
+                <div className="relative w-32 h-32 mb-5 rounded-full overflow-hidden ring-2 ring-ozx-primary/30 group-hover:ring-ozx-primary/70 transition">
+                  {s.photo_url ? (
+                    <img src={s.photo_url} alt={s.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-ozx-primary/30 to-ozx-secondary/40 flex items-center justify-center text-3xl font-display text-white">
+                      {s.name?.charAt(0) || "?"}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-ozx-bg/60 to-transparent opacity-0 group-hover:opacity-100 transition" />
+                </div>
+                <h3 className="font-display text-xl font-medium mb-2">{s.name}</h3>
+                {s.description && (
+                  <p className="text-sm text-ozx-muted leading-relaxed">{s.description}</p>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* TICKETS */}
       <section id="ingressos" className="py-24 lg:py-32 max-w-7xl mx-auto px-6 lg:px-12">
         <motion.div {...fadeUp} className="text-center mb-16 max-w-2xl mx-auto">
@@ -276,7 +315,7 @@ export default function Landing() {
           <p className="text-ozx-muted mt-4">Inclua acompanhante no checkout e receba duas credenciais individualizadas.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="flex flex-wrap justify-center gap-6 max-w-6xl mx-auto" data-testid="tickets-grid">
           {tickets.map((t, i) => {
             const lot = ticketWithLot(t);
             // collect all lots for this ticket, sorted by order
@@ -290,7 +329,7 @@ export default function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className={`relative glass-card rounded-3xl p-8 lg:p-10 group transition-all ${isSoldOut ? "opacity-60" : "hover:border-ozx-primary/40"}`}
+              className={`relative glass-card rounded-3xl p-8 lg:p-10 group transition-all w-full sm:w-[420px] lg:w-[380px] ${isSoldOut ? "opacity-60" : "hover:border-ozx-primary/40"}`}
               data-testid={`ticket-card-${t.ticket_type_id}`}
             >
               {visibleLot && (

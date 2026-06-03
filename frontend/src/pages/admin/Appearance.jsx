@@ -77,6 +77,25 @@ export default function Appearance() {
         </div>
       </div>
 
+      <div className="glass-card rounded-3xl p-6 mb-6">
+        <Label className="text-xs uppercase text-ozx-muted mb-4 block">Cards da seção "Sobre"</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <Label className="text-xs uppercase text-ozx-muted">Card 1 — Título</Label>
+            <Input value={data.about_card1_title || ""} onChange={(e) => set("about_card1_title", e.target.value)} className="bg-white/5 border-white/10 text-white" data-testid="about-card1-title-input" placeholder="Programação imersiva" />
+            <Label className="text-xs uppercase text-ozx-muted">Card 1 — Texto</Label>
+            <Textarea value={data.about_card1_text || ""} onChange={(e) => set("about_card1_text", e.target.value)} rows={4} className="bg-white/5 border-white/10 text-white" data-testid="about-card1-text-input" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs uppercase text-ozx-muted">Card 2 — Título</Label>
+            <Input value={data.about_card2_title || ""} onChange={(e) => set("about_card2_title", e.target.value)} className="bg-white/5 border-white/10 text-white" data-testid="about-card2-title-input" placeholder="Networking de alto nível" />
+            <Label className="text-xs uppercase text-ozx-muted">Card 2 — Texto</Label>
+            <Textarea value={data.about_card2_text || ""} onChange={(e) => set("about_card2_text", e.target.value)} rows={4} className="bg-white/5 border-white/10 text-white" data-testid="about-card2-text-input" />
+          </div>
+        </div>
+        <p className="text-xs text-ozx-muted mt-3">Editáveis os dois cards informativos da seção "Sobre o evento" na landing page.</p>
+      </div>
+
       <div className="space-y-5 mb-6">
         <div className="grid grid-cols-3 gap-3">
           <div><Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Primária</Label>

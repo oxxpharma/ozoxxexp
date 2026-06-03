@@ -45,6 +45,7 @@ async def get_public_config():
     appearance_doc = await db.app_settings.find_one({"_id": "appearance"}, {"_id": 0})
     tickets = await db.ticket_types.find({"is_active": True}, {"_id": 0}).to_list(50)
     lots = await _get_active_lots()
+    speakers = await db.speakers.find({"is_active": True}, {"_id": 0}).sort("order", 1).to_list(200)
     # First available lot per ticket
     current_lots = {}
     for lot in lots:
@@ -56,6 +57,7 @@ async def get_public_config():
         "tickets": tickets,
         "lots": lots,
         "current_lots": current_lots,
+        "speakers": speakers,
     }
 
 

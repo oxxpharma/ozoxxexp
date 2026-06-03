@@ -16,6 +16,7 @@ export default function Navbar({ logoUrl, logoSize }) {
   const links = [
     { to: "/", label: "Início" },
     { to: "/#sobre", label: "Sobre" },
+    { to: "/#palestrantes", label: "Palestrantes" },
     { to: "/#ingressos", label: "Ingressos" },
     { to: "/#galeria", label: "Galeria" },
     { to: "/#faq", label: "FAQ" },

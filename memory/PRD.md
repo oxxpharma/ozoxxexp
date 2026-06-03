@@ -37,6 +37,13 @@
 - **Tema clarificado** (bg #070b1e em vez de #070711, gradientes mais visíveis)
 - 27/27 novos testes backend passando
 
+## Iteração 03/06/2026 — Palestrantes, cards editáveis e tickets dinâmicos
+- **Editor de cards "Sobre"** no admin (Aparência): título + texto dos cards "Programação imersiva" e "Networking de alto nível" agora editáveis
+- **Seção Palestrantes** na landing (centralizada, foto circular, descrição) + admin CRUD completo em `/admin/speakers`
+- **Centralização dinâmica dos ingressos**: 1 card centralizado, 2 lado a lado centralizados, 3 em linha — via `flex flex-wrap justify-center`
+- Link "Palestrantes" no Navbar (com âncora #palestrantes)
+- Verificado: hero mobile sem animação `float` (somente glow circular permanece)
+
 ## Backlog (P1/P2)
 - P1: WhatsApp da credencial (Twilio/Z-API — adiado pelo usuário)
 - P1: Rate limit em /forgot-password
