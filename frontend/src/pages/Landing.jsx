@@ -10,6 +10,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Countdown from "../components/Countdown";
 import AddToCalendar from "../components/AddToCalendar";
+import Typewriter from "../components/Typewriter";
 
 const fadeUp = {
   initial: { opacity: 0, y: 30 },
@@ -95,9 +96,14 @@ export default function Landing() {
                 animate={{ opacity: [0.5, 0.9, 0.5], scale: [1, 1.1, 1] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               />
-              <p className="relative font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.02em] text-ozx-primary">
-                {(event.location_city || "São Paulo").toUpperCase()}
-              </p>
+              <Typewriter
+                text={(event.location_city || "São Paulo").toUpperCase()}
+                speed={130}
+                startDelay={900}
+                className="relative font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.02em] text-ozx-primary inline-flex items-baseline"
+                cursorClassName="text-ozx-primary"
+                testId="hero-location-typewriter"
+              />
             </div>
 
             <p className="text-base sm:text-lg text-ozx-muted max-w-xl mb-8 leading-relaxed" data-testid="hero-subheadline">
