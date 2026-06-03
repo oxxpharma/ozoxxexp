@@ -47,6 +47,17 @@ export default function Landing() {
           <img src={appearance.hero_image_url} alt="" className="w-full h-full object-cover opacity-70" />
           <div className="absolute inset-0 bg-gradient-to-b from-ozx-bg/60 via-ozx-bg/40 to-ozx-bg" />
           <div className="absolute inset-0 bg-gradient-to-r from-ozx-bg via-transparent to-transparent" />
+          {/* Floating background orbs (loop) */}
+          <motion.div
+            className="absolute top-1/4 right-1/3 h-72 w-72 rounded-full bg-ozx-primary/10 blur-[100px]"
+            animate={{ x: [0, 60, 0], y: [0, -40, 0] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute bottom-1/4 left-1/4 h-80 w-80 rounded-full bg-ozx-secondary/30 blur-[120px]"
+            animate={{ x: [0, -50, 0], y: [0, 40, 0] }}
+            transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+          />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 w-full">
@@ -79,7 +90,11 @@ export default function Landing() {
             </h1>
 
             <div className="relative inline-block mb-8" data-testid="hero-location">
-              <div className="absolute inset-0 bg-ozx-primary/30 blur-2xl rounded-full" />
+              <motion.div
+                className="absolute inset-0 bg-ozx-primary/30 blur-2xl rounded-full"
+                animate={{ opacity: [0.5, 0.9, 0.5], scale: [1, 1.1, 1] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              />
               <p className="relative font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.02em] text-ozx-primary">
                 {(event.location_city || "São Paulo").toUpperCase()}
               </p>
@@ -95,28 +110,40 @@ export default function Landing() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <Button
-                onClick={() => navigate("/checkout")}
-                className="bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full px-8 py-6 text-base glow-primary"
-                data-testid="hero-cta-primary"
+              <motion.div
+                animate={{ scale: [1, 1.03, 1] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                className="inline-block"
               >
-                {event.cta_primary} <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+                <Button
+                  onClick={() => navigate("/checkout")}
+                  className="bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full px-8 py-6 text-base glow-primary"
+                  data-testid="hero-cta-primary"
+                >
+                  {event.cta_primary} <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </motion.div>
               <AddToCalendar event={event} />
             </div>
           </motion.div>
 
           {appearance.hero_side_image_url && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.94, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 1.1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0, scale: 0.7, x: 120, rotate: 8 }}
+              animate={{ opacity: 1, scale: 1, x: 0, rotate: 0 }}
+              transition={{ duration: 1.4, delay: 0.4, type: "spring", stiffness: 60, damping: 14 }}
               className="relative hidden lg:block"
             >
-              <div className="absolute -inset-10 bg-ozx-primary/15 blur-[80px] rounded-full" />
-              <img
+              <motion.div
+                className="absolute -inset-10 bg-ozx-primary/15 blur-[80px] rounded-full"
+                animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <motion.img
                 src={appearance.hero_side_image_url}
                 alt=""
+                animate={{ y: [0, -14, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 className="relative w-[480px] xl:w-[560px] h-auto object-contain"
                 style={{ filter: "drop-shadow(0 30px 60px rgba(40, 185, 252, 0.25))" }}
                 data-testid="hero-side-image"
@@ -126,14 +153,16 @@ export default function Landing() {
 
           {appearance.hero_side_image_url && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.9, delay: 0.4 }}
+              initial={{ opacity: 0, scale: 0.85, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 1.1, delay: 0.4, type: "spring", stiffness: 60 }}
               className="lg:hidden -mt-4 mb-4 flex justify-center"
             >
-              <img
+              <motion.img
                 src={appearance.hero_side_image_url}
                 alt=""
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="w-64 sm:w-80 h-auto object-contain"
                 style={{ filter: "drop-shadow(0 20px 40px rgba(40, 185, 252, 0.3))" }}
                 data-testid="hero-side-image-mobile"
