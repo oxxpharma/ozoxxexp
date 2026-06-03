@@ -190,6 +190,34 @@ async def get_order(order_id: str, request: Request):
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    # Authorization: owner OR admin/financeiro OR has a recent session linking the order
+    requester = None
+    try:
+        requester = await get_current_user(request)
+    except HTTPException:
+        requester = None
+    if requester:
+        if requester["user_id"] == order.get("user_id") or requester.get("role") in ("admin", "financeiro"):
+            pass
+        elif requester.get("email") == order.get("holder_email"):
+            pass
+        else:
+            raise HTTPException(status_code=403, detail="Acesso negado")
+    else:
+        # Allow unauthenticated read but return only minimal fields needed for payment page
+        order = {
+            "order_id": order["order_id"],
+            "status": order["status"],
+            "total_amount": order["total_amount"],
+            "currency": order.get("currency", "BRL"),
+            "ticket_type_name": order.get("ticket_type_name"),
+            "quantity": order.get("quantity"),
+            "payment_method": order.get("payment_method"),
+            "pagbank_qr_code_url": order.get("pagbank_qr_code_url"),
+            "pagbank_qr_code_text": order.get("pagbank_qr_code_text"),
+            "has_companion": order.get("has_companion"),
+            "credentials_generated": order.get("credentials_generated"),
+        }
     creds = await db.credentials.find({"order_id": order_id}, {"_id": 0}).to_list(10)
     order["credentials"] = creds
     return order
@@ -236,7 +264,12 @@ async def retry_payment(order_id: str, request: Request):
 
 @router.post("/{order_id}/simulate-pay")
 async def simulate_payment(order_id: str):
-    """Dev helper to mark order as paid and generate credentials when PagBank webhook is not available."""
+    """Dev helper to mark order as paid and generate credentials when PagBank webhook is not available.
+    Gated by ENABLE_DEV_SIMULATE_PAY env var.
+    """
+    import os
+    if os.environ.get("ENABLE_DEV_SIMULATE_PAY", "true").lower() not in ("1", "true", "yes"):
+        raise HTTPException(status_code=403, detail="Simulação desativada")
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
