@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from db import db
 from models import OrderCreate, ManualOrderCreate, OrderStatusUpdate, gen_id, now_iso
 from auth import get_current_user, require_roles
-from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status
+from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout
 from services.qrcode_gen import generate_qr_png_base64
 from services.email_service import send_credential_email
 from services.pdf_gen import generate_credential_pdf
@@ -283,36 +283,68 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
 
     notif_url = f"{request.url.scheme}://{request.headers.get('host', '')}/api/webhook/pagbank"
     if total_amount > 0:
-        pb = await pb_create_order(
-            reference_id=order_id,
-            customer_name=holder_name,
-            customer_email=holder_email,
-            customer_cpf=holder_cpf,
-            customer_phone=holder_phone,
-            amount_cents=amount_cents,
-            description=f"{ticket['name']} ({qty}x) — Ozoxx Experience",
-            payment_method=payload.payment_method,
-            notification_url=notif_url,
-        )
-        if pb.get("success"):
-            await db.orders.update_one({"order_id": order_id}, {"$set": {
-                "pagbank_order_id": pb.get("order_id"),
-                "pagbank_qr_code_url": pb.get("qr_code_url"),
-                "pagbank_qr_code_text": pb.get("qr_code_text"),
-                "updated_at": now_iso(),
-            }})
-            order["pagbank_order_id"] = pb.get("order_id")
-            order["pagbank_qr_code_url"] = pb.get("qr_code_url")
-            order["pagbank_qr_code_text"] = pb.get("qr_code_text")
-            order["payment_ready"] = True
+        if payload.payment_method == "credit_card":
+            # Hosted checkout flow — redirects user to PagBank page for card payment
+            origin = request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
+            redirect_url = f"{origin}/payment/{order_id}"
+            pb = await pb_create_checkout(
+                reference_id=order_id,
+                customer_name=holder_name,
+                customer_email=holder_email,
+                customer_cpf=holder_cpf,
+                customer_phone=holder_phone,
+                amount_cents=amount_cents,
+                description=f"{ticket['name']} ({qty}x) — Ozoxx Experience",
+                redirect_url=redirect_url,
+                notification_url=notif_url,
+            )
+            if pb.get("success"):
+                await db.orders.update_one({"order_id": order_id}, {"$set": {
+                    "pagbank_checkout_id": pb.get("checkout_id"),
+                    "pagbank_payment_link": pb.get("payment_link"),
+                    "updated_at": now_iso(),
+                }, "$unset": {"payment_error": ""}})
+                order["pagbank_checkout_id"] = pb.get("checkout_id")
+                order["pagbank_payment_link"] = pb.get("payment_link")
+                order["payment_ready"] = True
+            else:
+                error_msg = pb.get("error", "PagBank indisponível")
+                await db.orders.update_one({"order_id": order_id}, {"$set": {
+                    "payment_error": error_msg, "updated_at": now_iso(),
+                }})
+                order["payment_ready"] = False
+                order["payment_error"] = error_msg
         else:
-            error_msg = pb.get("error", "PagBank indisponível")
-            await db.orders.update_one({"order_id": order_id}, {"$set": {
-                "payment_error": error_msg,
-                "updated_at": now_iso(),
-            }})
-            order["payment_ready"] = False
-            order["payment_error"] = error_msg
+            pb = await pb_create_order(
+                reference_id=order_id,
+                customer_name=holder_name,
+                customer_email=holder_email,
+                customer_cpf=holder_cpf,
+                customer_phone=holder_phone,
+                amount_cents=amount_cents,
+                description=f"{ticket['name']} ({qty}x) — Ozoxx Experience",
+                payment_method=payload.payment_method,
+                notification_url=notif_url,
+            )
+            if pb.get("success"):
+                await db.orders.update_one({"order_id": order_id}, {"$set": {
+                    "pagbank_order_id": pb.get("order_id"),
+                    "pagbank_qr_code_url": pb.get("qr_code_url"),
+                    "pagbank_qr_code_text": pb.get("qr_code_text"),
+                    "updated_at": now_iso(),
+                }, "$unset": {"payment_error": ""}})
+                order["pagbank_order_id"] = pb.get("order_id")
+                order["pagbank_qr_code_url"] = pb.get("qr_code_url")
+                order["pagbank_qr_code_text"] = pb.get("qr_code_text")
+                order["payment_ready"] = True
+            else:
+                error_msg = pb.get("error", "PagBank indisponível")
+                await db.orders.update_one({"order_id": order_id}, {"$set": {
+                    "payment_error": error_msg,
+                    "updated_at": now_iso(),
+                }})
+                order["payment_ready"] = False
+                order["payment_error"] = error_msg
     else:
         # Free order (100% coupon discount?) — mark as paid right away
         await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "paid_at": now_iso(), "updated_at": now_iso()}})
@@ -358,6 +390,7 @@ async def get_order(order_id: str, request: Request):
         "currency": order.get("currency", "BRL"), "ticket_type_name": order.get("ticket_type_name"),
         "quantity": order.get("quantity"), "payment_method": order.get("payment_method"),
         "pagbank_qr_code_url": order.get("pagbank_qr_code_url"), "pagbank_qr_code_text": order.get("pagbank_qr_code_text"),
+        "pagbank_payment_link": order.get("pagbank_payment_link"),
         "has_companion": order.get("has_companion"), "credentials_generated": order.get("credentials_generated"),
         "discount": order.get("discount", 0), "subtotal": order.get("subtotal"), "coupon_code": order.get("coupon_code"),
         "payment_error": order.get("payment_error"),
@@ -376,13 +409,35 @@ async def retry_payment(order_id: str, request: Request):
     amount_cents = int(round(order["total_amount"] * 100))
     notif_url = f"{request.url.scheme}://{request.headers.get('host', '')}/api/webhook/pagbank"
     new_ref = f"{order_id}-retry-{int(time.time())}"
+    payment_method = order.get("payment_method", "pix")
+
+    if payment_method == "credit_card":
+        origin = request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
+        redirect_url = f"{origin}/payment/{order_id}"
+        pb = await pb_create_checkout(
+            reference_id=new_ref,
+            customer_name=order["holder_name"], customer_email=order["holder_email"],
+            customer_cpf=order.get("holder_cpf", ""), customer_phone=order.get("holder_phone", ""),
+            amount_cents=amount_cents,
+            description=f"{order['ticket_type_name']} ({order['quantity']}x)",
+            redirect_url=redirect_url, notification_url=notif_url,
+        )
+        if not pb.get("success"):
+            raise HTTPException(status_code=502, detail=f"Falha PagBank: {pb.get('error')}")
+        await db.orders.update_one({"order_id": order_id}, {"$set": {
+            "pagbank_checkout_id": pb.get("checkout_id"),
+            "pagbank_payment_link": pb.get("payment_link"),
+            "status": "WAITING", "updated_at": now_iso(),
+        }, "$unset": {"payment_error": ""}})
+        return await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+
     pb = await pb_create_order(
         reference_id=new_ref,
         customer_name=order["holder_name"], customer_email=order["holder_email"],
         customer_cpf=order.get("holder_cpf", ""), customer_phone=order.get("holder_phone", ""),
         amount_cents=amount_cents,
         description=f"{order['ticket_type_name']} ({order['quantity']}x)",
-        payment_method=order.get("payment_method", "pix"), notification_url=notif_url,
+        payment_method=payment_method, notification_url=notif_url,
     )
     if not pb.get("success"):
         raise HTTPException(status_code=502, detail=f"Falha PagBank: {pb.get('error')}")

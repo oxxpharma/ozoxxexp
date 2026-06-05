@@ -59,6 +59,7 @@ export default function Payment() {
 
   const isPaid = order.status === "PAID";
   const isFailed = ["DECLINED", "CANCELED"].includes(order.status);
+  const isCard = order.payment_method === "credit_card";
 
   return (
     <div className="min-h-screen bg-ozx-bg">
@@ -96,7 +97,25 @@ export default function Payment() {
               </div>
               <h2 className="font-display text-3xl mb-6">R$ {Number(order.total_amount).toFixed(2).replace(".", ",")}</h2>
 
-              {order.pagbank_qr_code_url || order.pagbank_qr_code_text ? (
+              {isCard && order.pagbank_payment_link ? (
+                <div className="space-y-4" data-testid="payment-card-checkout">
+                  <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
+                    <p className="text-sm text-ozx-muted leading-relaxed">
+                      O pagamento com <span className="text-white font-medium">cartão de crédito</span> será concluído de forma segura no ambiente do PagBank. Você poderá parcelar em até 12x.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => { window.location.href = order.pagbank_payment_link; }}
+                    className="w-full bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full py-6 text-base"
+                    data-testid="payment-card-go"
+                  >
+                    Pagar com cartão no PagBank →
+                  </Button>
+                  <Button variant="ghost" className="w-full text-ozx-muted" onClick={fetchOrder} data-testid="payment-refresh-card">
+                    <RefreshCw className="w-4 h-4 mr-2" /> Já paguei, atualizar status
+                  </Button>
+                </div>
+              ) : order.pagbank_qr_code_url || order.pagbank_qr_code_text ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="bg-white rounded-2xl p-6 flex items-center justify-center">
                     {order.pagbank_qr_code_url ? (

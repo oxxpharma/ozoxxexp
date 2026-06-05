@@ -166,6 +166,89 @@ async def create_order(
         return {"success": False, "error": str(e)}
 
 
+async def create_checkout(
+    *,
+    reference_id: str,
+    customer_name: str,
+    customer_email: str,
+    customer_cpf: str,
+    customer_phone: str,
+    amount_cents: int,
+    description: str,
+    redirect_url: str,
+    notification_url: Optional[str] = None,
+) -> dict:
+    """Creates a PagBank hosted checkout (suporta PIX + Cartão de Crédito).
+    Retorna payment_link para redirecionar o usuário."""
+    cfg = await get_pagbank_config()
+    if not cfg or not cfg.get("token"):
+        return {"success": False, "error": "PagBank não configurado. Configure no painel admin."}
+
+    cpf_clean = _digits(customer_cpf)
+    cpf_or_cnpj_valid = _is_valid_cpf(cpf_clean) or _is_valid_cnpj(cpf_clean)
+    if not cpf_or_cnpj_valid:
+        if cfg.get("sandbox"):
+            tax_id = SANDBOX_TEST_CPF
+        else:
+            return {"success": False, "error": "CPF/CNPJ inválido. Verifique e tente novamente."}
+    else:
+        tax_id = cpf_clean
+
+    phone_digits = _digits(customer_phone)
+    area = phone_digits[:2] if len(phone_digits) >= 10 else "11"
+    num = phone_digits[2:] if len(phone_digits) >= 10 else "999999999"
+
+    body = {
+        "reference_id": reference_id,
+        "customer": {
+            "name": customer_name,
+            "email": customer_email,
+            "tax_id": tax_id,
+            "phones": [{"country": "55", "area": area or "11", "number": num or "999999999", "type": "MOBILE"}],
+        },
+        "items": [
+            {"reference_id": reference_id, "name": description, "quantity": 1, "unit_amount": amount_cents}
+        ],
+        "payment_methods": [
+            {"type": "CREDIT_CARD"},
+            {"type": "PIX"},
+        ],
+        "payment_methods_configs": [
+            {"type": "CREDIT_CARD", "config_options": [{"option": "INSTALLMENTS_LIMIT", "value": "12"}]},
+        ],
+        "redirect_url": redirect_url,
+        "notification_urls": [notification_url] if notification_url else [],
+    }
+
+    url = f"{base_url(cfg['sandbox'])}/checkouts"
+    headers = {"Authorization": f"Bearer {cfg['token']}", "Content-Type": "application/json", "Accept": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(url, headers=headers, json=body)
+        if r.status_code in (200, 201):
+            data = r.json()
+            payment_link = None
+            for lk in data.get("links", []):
+                rel = (lk.get("rel") or "").upper()
+                if rel in ("PAY", "CHECKOUT", "PAYMENT") or lk.get("media") == "text/html":
+                    payment_link = lk.get("href")
+                    break
+            if not payment_link:
+                logger.error(f"PagBank checkout sem payment_link: {data}")
+                return {"success": False, "error": "PagBank: link de pagamento não retornado", "raw": data}
+            return {
+                "success": True,
+                "checkout_id": data.get("id"),
+                "payment_link": payment_link,
+                "raw": data,
+            }
+        logger.error(f"PagBank create_checkout failed {r.status_code}: {r.text}")
+        return {"success": False, "error": f"PagBank: {r.status_code}", "raw": r.text[:600]}
+    except Exception as e:
+        logger.exception("PagBank checkout request failed")
+        return {"success": False, "error": str(e)}
+
+
 async def get_order_status(pagbank_order_id: str) -> dict:
     cfg = await get_pagbank_config()
     if not cfg or not cfg.get("token"):
