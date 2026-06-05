@@ -45,6 +45,41 @@ def _digits(s: Optional[str]) -> str:
     return "".join(c for c in (s or "") if c.isdigit())
 
 
+def _is_valid_cpf(cpf: str) -> bool:
+    """Validate Brazilian CPF using check-digit algorithm."""
+    cpf = _digits(cpf)
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
+        return False
+    for i in (9, 10):
+        s = sum(int(cpf[j]) * ((i + 1) - j) for j in range(i))
+        d = (s * 10) % 11
+        if d == 10:
+            d = 0
+        if d != int(cpf[i]):
+            return False
+    return True
+
+
+def _is_valid_cnpj(cnpj: str) -> bool:
+    cnpj = _digits(cnpj)
+    if len(cnpj) != 14 or cnpj == cnpj[0] * 14:
+        return False
+    weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    weights2 = [6] + weights1
+    for wlist, idx in ((weights1, 12), (weights2, 13)):
+        s = sum(int(cnpj[i]) * wlist[i] for i in range(idx))
+        d = 11 - (s % 11)
+        if d >= 10:
+            d = 0
+        if d != int(cnpj[idx]):
+            return False
+    return True
+
+
+# Known-valid CPF used by PagBank sandbox tests
+SANDBOX_TEST_CPF = "12345678909"
+
+
 async def create_order(
     *,
     reference_id: str,
@@ -61,6 +96,18 @@ async def create_order(
     if not cfg or not cfg.get("token"):
         return {"success": False, "error": "PagBank não configurado. Configure no painel admin."}
 
+    cpf_clean = _digits(customer_cpf)
+    cpf_or_cnpj_valid = _is_valid_cpf(cpf_clean) or _is_valid_cnpj(cpf_clean)
+    if not cpf_or_cnpj_valid:
+        if cfg.get("sandbox"):
+            # In sandbox, fall back to a known-valid test CPF to allow flow testing
+            logger.warning(f"Invalid CPF '{cpf_clean}' — using sandbox test CPF for PagBank")
+            tax_id = SANDBOX_TEST_CPF
+        else:
+            return {"success": False, "error": "CPF/CNPJ inválido. Verifique e tente novamente."}
+    else:
+        tax_id = cpf_clean
+
     phone_digits = _digits(customer_phone)
     area = phone_digits[:2] if len(phone_digits) >= 10 else "11"
     num = phone_digits[2:] if len(phone_digits) >= 10 else "999999999"
@@ -70,7 +117,7 @@ async def create_order(
         "customer": {
             "name": customer_name,
             "email": customer_email,
-            "tax_id": _digits(customer_cpf) or "00000000000",
+            "tax_id": tax_id,
             "phones": [{"country": "55", "area": area or "11", "number": num or "999999999", "type": "MOBILE"}],
         },
         "items": [

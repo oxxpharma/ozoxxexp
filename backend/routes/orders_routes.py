@@ -306,8 +306,13 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
             order["pagbank_qr_code_text"] = pb.get("qr_code_text")
             order["payment_ready"] = True
         else:
+            error_msg = pb.get("error", "PagBank indisponível")
+            await db.orders.update_one({"order_id": order_id}, {"$set": {
+                "payment_error": error_msg,
+                "updated_at": now_iso(),
+            }})
             order["payment_ready"] = False
-            order["payment_error"] = pb.get("error", "PagBank indisponível")
+            order["payment_error"] = error_msg
     else:
         # Free order (100% coupon discount?) — mark as paid right away
         await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "paid_at": now_iso(), "updated_at": now_iso()}})
@@ -355,6 +360,7 @@ async def get_order(order_id: str, request: Request):
         "pagbank_qr_code_url": order.get("pagbank_qr_code_url"), "pagbank_qr_code_text": order.get("pagbank_qr_code_text"),
         "has_companion": order.get("has_companion"), "credentials_generated": order.get("credentials_generated"),
         "discount": order.get("discount", 0), "subtotal": order.get("subtotal"), "coupon_code": order.get("coupon_code"),
+        "payment_error": order.get("payment_error"),
     }
     return public
 
@@ -386,7 +392,7 @@ async def retry_payment(order_id: str, request: Request):
         "pagbank_qr_code_url": pb.get("qr_code_url"),
         "pagbank_qr_code_text": pb.get("qr_code_text"),
         "status": "WAITING", "updated_at": now_iso(),
-    }})
+    }, "$unset": {"payment_error": ""}})
     return await db.orders.find_one({"order_id": order_id}, {"_id": 0})
 
 
