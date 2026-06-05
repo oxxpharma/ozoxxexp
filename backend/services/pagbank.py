@@ -303,3 +303,33 @@ def extract_paid_status_from_pagbank(raw: dict) -> Optional[str]:
             if st in ("DECLINED", "CANCELED"):
                 return st
     return None
+
+
+async def resolve_checkout_status(checkout_id: str) -> Optional[str]:
+    """Fetches a checkout AND its linked orders to determine the actual payment status.
+    PagBank /checkouts response only lists linked orders by id; charges live on /orders/{id}.
+    Returns 'PAID', 'DECLINED', 'CANCELED' or None when undetermined.
+    """
+    chk = await get_checkout_status(checkout_id)
+    if not chk.get("success"):
+        return None
+    raw = chk.get("raw") or {}
+    # Try inline charges first (sometimes present)
+    inline = extract_paid_status_from_pagbank(raw)
+    if inline:
+        return inline
+    # Walk each linked order
+    resolved = None
+    for o in raw.get("orders") or []:
+        oid = o.get("id")
+        if not oid:
+            continue
+        ord_resp = await get_order_status(oid)
+        if not ord_resp.get("success"):
+            continue
+        st = extract_paid_status_from_pagbank(ord_resp.get("raw") or {})
+        if st == "PAID":
+            return "PAID"
+        if st in ("DECLINED", "CANCELED"):
+            resolved = st
+    return resolved

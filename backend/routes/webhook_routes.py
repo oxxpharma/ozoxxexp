@@ -7,6 +7,7 @@ from services.pagbank import (
     get_order_status as pb_get_status,
     get_checkout_status as pb_get_checkout,
     extract_paid_status_from_pagbank,
+    resolve_checkout_status as pb_resolve_checkout,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,9 +92,7 @@ async def pagbank_webhook(request: Request):
         if r.get("success"):
             new_status = extract_paid_status_from_pagbank(r["raw"])
     if not new_status and order.get("pagbank_checkout_id"):
-        r = await pb_get_checkout(order["pagbank_checkout_id"])
-        if r.get("success"):
-            new_status = extract_paid_status_from_pagbank(r["raw"])
+        new_status = await pb_resolve_checkout(order["pagbank_checkout_id"])
 
     if new_status:
         await _apply_status_to_order(order, new_status)

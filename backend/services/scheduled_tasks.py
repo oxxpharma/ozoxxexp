@@ -9,6 +9,7 @@ from services.pagbank import (
     get_order_status as pb_get_status,
     get_checkout_status as pb_get_checkout,
     extract_paid_status_from_pagbank,
+    resolve_checkout_status as pb_resolve_checkout,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,9 +88,7 @@ async def autopoll_waiting_orders():
             if r.get("success"):
                 new_status = extract_paid_status_from_pagbank(r["raw"])
         if not new_status and order.get("pagbank_checkout_id"):
-            r = await pb_get_checkout(order["pagbank_checkout_id"])
-            if r.get("success"):
-                new_status = extract_paid_status_from_pagbank(r["raw"])
+            new_status = await pb_resolve_checkout(order["pagbank_checkout_id"])
         if new_status and new_status != order["status"]:
             updates = {"status": new_status, "updated_at": now_iso()}
             if new_status == "PAID":

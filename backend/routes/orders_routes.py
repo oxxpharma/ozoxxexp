@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from db import db
 from models import OrderCreate, ManualOrderCreate, OrderStatusUpdate, gen_id, now_iso
 from auth import get_current_user, require_roles
-from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout, get_checkout_status as pb_get_checkout, extract_paid_status_from_pagbank
+from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout, get_checkout_status as pb_get_checkout, extract_paid_status_from_pagbank, resolve_checkout_status as pb_resolve_checkout
 from services.qrcode_gen import generate_qr_png_base64
 from services.email_service import send_credential_email
 from services.pdf_gen import generate_credential_pdf
@@ -281,11 +281,14 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
     if coupon:
         await db.coupons.update_one({"coupon_id": coupon["coupon_id"]}, {"$inc": {"used_count": 1}})
 
-    notif_url = f"{request.url.scheme}://{request.headers.get('host', '')}/api/webhook/pagbank"
+    import os as _os
+    _public_base = _os.environ.get("PUBLIC_BASE_URL")
+    _api_origin = _public_base or f"{request.url.scheme}://{request.headers.get('host', '')}"
+    notif_url = f"{_api_origin}/api/webhook/pagbank"
     if total_amount > 0:
         if payload.payment_method == "credit_card":
             # Hosted checkout flow — redirects user to PagBank page for card payment
-            origin = request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
+            origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
             redirect_url = f"{origin}/payment/{order_id}"
             pb = await pb_create_checkout(
                 reference_id=order_id,
@@ -407,12 +410,15 @@ async def retry_payment(order_id: str, request: Request):
         raise HTTPException(status_code=400, detail="Pedido já pago")
 
     amount_cents = int(round(order["total_amount"] * 100))
-    notif_url = f"{request.url.scheme}://{request.headers.get('host', '')}/api/webhook/pagbank"
+    import os as _os
+    _public_base = _os.environ.get("PUBLIC_BASE_URL")
+    _api_origin = _public_base or f"{request.url.scheme}://{request.headers.get('host', '')}"
+    notif_url = f"{_api_origin}/api/webhook/pagbank"
     new_ref = f"{order_id}-retry-{int(time.time())}"
     payment_method = order.get("payment_method", "pix")
 
     if payment_method == "credit_card":
-        origin = request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
+        origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
         redirect_url = f"{origin}/payment/{order_id}"
         pb = await pb_create_checkout(
             reference_id=new_ref,
@@ -491,17 +497,15 @@ async def refresh_status(order_id: str):
 
     # Credit card / Checkout flow
     if order["status"] != "PAID" and order.get("pagbank_checkout_id"):
-        pb = await pb_get_checkout(order["pagbank_checkout_id"])
-        if pb.get("success"):
-            new_status = extract_paid_status_from_pagbank(pb["raw"])
-            if new_status == "PAID":
-                await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "paid_at": now_iso(), "updated_at": now_iso()}})
-                order["status"] = "PAID"
-                if not order.get("credentials_generated"):
-                    await _create_credentials_for_order(order)
-                    await db.orders.update_one({"order_id": order_id}, {"$set": {"credentials_generated": True}})
-            elif new_status and new_status != order["status"]:
-                await db.orders.update_one({"order_id": order_id}, {"$set": {"status": new_status, "updated_at": now_iso()}})
+        new_status = await pb_resolve_checkout(order["pagbank_checkout_id"])
+        if new_status == "PAID":
+            await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "paid_at": now_iso(), "updated_at": now_iso()}})
+            order["status"] = "PAID"
+            if not order.get("credentials_generated"):
+                await _create_credentials_for_order(order)
+                await db.orders.update_one({"order_id": order_id}, {"$set": {"credentials_generated": True}})
+        elif new_status and new_status != order["status"]:
+            await db.orders.update_one({"order_id": order_id}, {"$set": {"status": new_status, "updated_at": now_iso()}})
 
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     creds = await db.credentials.find({"order_id": order_id}, {"_id": 0}).to_list(10)
