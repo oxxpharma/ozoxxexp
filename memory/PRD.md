@@ -44,6 +44,14 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 05/06/2026 — PagBank cartão, auto-confirmação e gestão de pedidos
+- **Cartão de crédito real**: implementado fluxo `POST /checkouts` (PagBank Checkout hospedado) com PIX+CREDIT_CARD habilitados, parcelamento em até 12x. Endpoint antigo `/orders` continua para PIX.
+- **Validação real de CPF/CNPJ** (algoritmo brasileiro) + fallback para CPF de teste em sandbox
+- **Webhook robusto**: trata notificações de `/orders` (PIX) e `/checkouts` (cartão), busca pedido por `pagbank_order_id` OU `pagbank_checkout_id`, re-consulta PagBank para confirmar antes de marcar PAID
+- **Auto-confirmação por polling** (`autopoll_loop`): a cada 1 minuto, varre pedidos WAITING > 30s e < 7d, consulta PagBank e atualiza status automaticamente (rede de segurança para webhooks perdidos)
+- **Auto-cancelamento de WAITING > 7 dias** (`cleanup_loop` rodando a cada 1h): seta status `CANCELED` com `canceled_reason`
+- **Filtros completos no admin de pedidos**: busca textual (nome, e-mail, CPF, telefone, pedido, cupom), status, forma de pagamento, data De/Até — feito no backend (regex case-insensitive no MongoDB) com debounce no frontend
+
 ## Backlog (P1/P2)
 - P1: WhatsApp da credencial (Twilio/Z-API — adiado pelo usuário)
 - P1: Rate limit em /forgot-password

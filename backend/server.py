@@ -29,6 +29,7 @@ from routes.tracking_routes import router as tracking_router, analytics_router
 from routes.speakers_routes import router as speakers_router, public_router as speakers_public_router
 from services.storage import init_storage
 from services.email_templates_seed import DEFAULT_TEMPLATES
+from services.scheduled_tasks import cleanup_loop, autopoll_loop
 
 
 app = FastAPI(title="Ozoxx Experience API")
@@ -121,6 +122,11 @@ async def on_startup():
         existing = await db.email_templates.find_one({"template_id": tpl["template_id"]})
         if not existing:
             await db.email_templates.insert_one({**tpl, "created_at": now_iso()})
+
+    # Background tasks: order cleanup + payment autopolling
+    import asyncio
+    app.state.cleanup_task = asyncio.create_task(cleanup_loop())
+    app.state.autopoll_task = asyncio.create_task(autopoll_loop())
 
     logger.info("Ozoxx backend startup complete")
 

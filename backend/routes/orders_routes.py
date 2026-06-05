@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from db import db
 from models import OrderCreate, ManualOrderCreate, OrderStatusUpdate, gen_id, now_iso
 from auth import get_current_user, require_roles
-from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout
+from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout, get_checkout_status as pb_get_checkout, extract_paid_status_from_pagbank
 from services.qrcode_gen import generate_qr_png_base64
 from services.email_service import send_credential_email
 from services.pdf_gen import generate_credential_pdf
@@ -474,21 +474,35 @@ async def refresh_status(order_id: str):
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
-    if not order.get("pagbank_order_id"):
-        return order
-    pb = await pb_get_status(order["pagbank_order_id"])
-    if pb.get("success"):
-        charges = pb["raw"].get("charges", [])
-        if charges:
-            pb_status = charges[0].get("status", "WAITING")
-            if pb_status == "PAID" and order["status"] != "PAID":
+
+    # PIX flow
+    if order.get("pagbank_order_id"):
+        pb = await pb_get_status(order["pagbank_order_id"])
+        if pb.get("success"):
+            new_status = extract_paid_status_from_pagbank(pb["raw"])
+            if new_status == "PAID" and order["status"] != "PAID":
                 await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "paid_at": now_iso(), "updated_at": now_iso()}})
                 order["status"] = "PAID"
                 if not order.get("credentials_generated"):
                     await _create_credentials_for_order(order)
                     await db.orders.update_one({"order_id": order_id}, {"$set": {"credentials_generated": True}})
-            elif pb_status != "PAID":
-                await db.orders.update_one({"order_id": order_id}, {"$set": {"status": pb_status, "updated_at": now_iso()}})
+            elif new_status and new_status not in (order["status"], "PAID"):
+                await db.orders.update_one({"order_id": order_id}, {"$set": {"status": new_status, "updated_at": now_iso()}})
+
+    # Credit card / Checkout flow
+    if order["status"] != "PAID" and order.get("pagbank_checkout_id"):
+        pb = await pb_get_checkout(order["pagbank_checkout_id"])
+        if pb.get("success"):
+            new_status = extract_paid_status_from_pagbank(pb["raw"])
+            if new_status == "PAID":
+                await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "paid_at": now_iso(), "updated_at": now_iso()}})
+                order["status"] = "PAID"
+                if not order.get("credentials_generated"):
+                    await _create_credentials_for_order(order)
+                    await db.orders.update_one({"order_id": order_id}, {"$set": {"credentials_generated": True}})
+            elif new_status and new_status != order["status"]:
+                await db.orders.update_one({"order_id": order_id}, {"$set": {"status": new_status, "updated_at": now_iso()}})
+
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     creds = await db.credentials.find({"order_id": order_id}, {"_id": 0}).to_list(10)
     order["credentials"] = creds

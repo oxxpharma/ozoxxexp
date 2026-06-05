@@ -188,8 +188,40 @@ async def delete_ticket(ticket_type_id: str, user: dict = Depends(admin_only)):
 
 # ---------- ORDERS ----------
 @router.get("/orders")
-async def list_orders(user: dict = Depends(admin_or_financeiro)):
-    return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+async def list_orders(
+    user: dict = Depends(admin_or_financeiro),
+    q: str | None = None,
+    status: str | None = None,
+    payment_method: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 1000,
+):
+    query: dict = {}
+    if status and status != "all":
+        query["status"] = status
+    if payment_method and payment_method != "all":
+        query["payment_method"] = payment_method
+    if date_from or date_to:
+        rng: dict = {}
+        if date_from:
+            rng["$gte"] = date_from
+        if date_to:
+            # Include the full day
+            rng["$lte"] = date_to + "T23:59:59"
+        query["created_at"] = rng
+    if q:
+        import re
+        rx = re.compile(re.escape(q.strip()), re.IGNORECASE)
+        query["$or"] = [
+            {"holder_name": rx},
+            {"holder_email": rx},
+            {"holder_cpf": rx},
+            {"holder_phone": rx},
+            {"order_id": rx},
+            {"coupon_code": rx},
+        ]
+    return await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 5000))
 
 
 @router.get("/orders/{order_id}")

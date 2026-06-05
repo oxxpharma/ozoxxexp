@@ -12,23 +12,48 @@ import { toast } from "sonner";
 import { statusLabel, methodLabel } from "../../lib/labels";
 
 const STATUSES = ["WAITING", "PAID", "IN_ANALYSIS", "DECLINED", "CANCELED", "REFUNDED", "COURTESY"];
+const PAYMENT_METHODS = ["pix", "credit_card", "courtesy"];
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [filter, setFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filters, setFilters] = useState({ q: "", status: "all", payment_method: "all", date_from: "", date_to: "" });
+  const [loading, setLoading] = useState(false);
   const [courtesyOpen, setCourtesyOpen] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [lots, setLots] = useState([]);
   const [courtesyForm, setCourtesyForm] = useState({ holder_name: "", holder_email: "", holder_cpf: "", holder_phone: "", ticket_type_id: "", lot_id: "", has_companion: false, companion: { name: "", email: "", cpf: "", phone: "" }, notes: "" });
 
-  const load = async () => { const { data } = await api.get("/admin/orders"); setOrders(data); };
+  const load = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (filters.q) params.q = filters.q;
+      if (filters.status !== "all") params.status = filters.status;
+      if (filters.payment_method !== "all") params.payment_method = filters.payment_method;
+      if (filters.date_from) params.date_from = filters.date_from;
+      if (filters.date_to) params.date_to = filters.date_to;
+      const { data } = await api.get("/admin/orders", { params });
+      setOrders(data);
+    } catch (e) {
+      toast.error("Erro ao carregar pedidos");
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
     load();
     api.get("/admin/tickets").then((r) => setTickets(r.data));
     api.get("/admin/lots").then((r) => setLots(r.data));
-  }, []);
+  }, []); // eslint-disable-line
+
+  // Reload when filters change (debounced for the text query)
+  useEffect(() => {
+    const t = setTimeout(load, 300);
+    return () => clearTimeout(t);
+  }, [filters]); // eslint-disable-line
+
+  const clearFilters = () => setFilters({ q: "", status: "all", payment_method: "all", date_from: "", date_to: "" });
 
   const openOrder = async (id) => { const { data } = await api.get(`/admin/orders/${id}`); setSelected(data); };
 
@@ -67,11 +92,7 @@ export default function AdminOrders() {
     } catch (e) { toast.error(e.response?.data?.detail || "Erro"); }
   };
 
-  const filtered = orders.filter((o) => {
-    if (statusFilter !== "all" && o.status !== statusFilter) return false;
-    if (filter && !`${o.holder_name} ${o.holder_email} ${o.order_id}`.toLowerCase().includes(filter.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = orders;
 
   return (
     <div>
@@ -116,15 +137,60 @@ export default function AdminOrders() {
         </Dialog>
       </div>
 
-      <div className="flex gap-3 mb-4">
-        <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Buscar..." className="bg-white/5 border-white/10 text-white max-w-md" />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="bg-white/5 border-white/10 text-white max-w-xs"><SelectValue /></SelectTrigger>
-          <SelectContent className="bg-ozx-bg2 text-white border-white/10">
-            <SelectItem value="all">Todos status</SelectItem>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="glass-card rounded-2xl p-4 mb-4 space-y-3" data-testid="orders-filters">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-5">
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Busca (nome, e-mail, CPF, telefone, pedido, cupom)</Label>
+            <Input
+              value={filters.q}
+              onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+              placeholder="Digite para filtrar..."
+              className="bg-white/5 border-white/10 text-white"
+              data-testid="orders-filter-q"
+            />
+          </div>
+          <div className="md:col-span-3">
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Status</Label>
+            <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="orders-filter-status"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-ozx-bg2 text-white border-white/10">
+                <SelectItem value="all">Todos status</SelectItem>
+                {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-4">
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Forma de pagamento</Label>
+            <Select value={filters.payment_method} onValueChange={(v) => setFilters({ ...filters, payment_method: v })}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="orders-filter-method"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-ozx-bg2 text-white border-white/10">
+                <SelectItem value="all">Todas</SelectItem>
+                {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{methodLabel(m)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-3">
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">De</Label>
+            <Input type="date" value={filters.date_from} onChange={(e) => setFilters({ ...filters, date_from: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="orders-filter-from" />
+          </div>
+          <div className="md:col-span-3">
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Até</Label>
+            <Input type="date" value={filters.date_to} onChange={(e) => setFilters({ ...filters, date_to: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="orders-filter-to" />
+          </div>
+          <div className="md:col-span-3 flex items-end">
+            <Button variant="outline" onClick={clearFilters} className="border-white/15 text-white w-full" data-testid="orders-filter-clear">
+              Limpar filtros
+            </Button>
+          </div>
+          <div className="md:col-span-3 flex items-end">
+            <Button variant="ghost" onClick={load} className="text-ozx-muted hover:text-white w-full" data-testid="orders-filter-refresh">
+              <RefreshCw className="w-4 h-4 mr-2" /> Atualizar
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-ozx-muted">
+          {loading ? "Carregando..." : `${filtered.length} pedido${filtered.length !== 1 ? "s" : ""} encontrado${filtered.length !== 1 ? "s" : ""}`}
+        </p>
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">

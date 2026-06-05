@@ -218,6 +218,7 @@ async def create_checkout(
         ],
         "redirect_url": redirect_url,
         "notification_urls": [notification_url] if notification_url else [],
+        "payment_notification_urls": [notification_url] if notification_url else [],
     }
 
     url = f"{base_url(cfg['sandbox'])}/checkouts"
@@ -263,3 +264,42 @@ async def get_order_status(pagbank_order_id: str) -> dict:
         return {"success": False, "error": f"HTTP {r.status_code}", "raw": r.text[:400]}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+async def get_checkout_status(checkout_id: str) -> dict:
+    """Fetch checkout details to inspect linked orders/charges."""
+    cfg = await get_pagbank_config()
+    if not cfg or not cfg.get("token"):
+        return {"success": False, "error": "PagBank não configurado"}
+    url = f"{base_url(cfg['sandbox'])}/checkouts/{checkout_id}"
+    headers = {"Authorization": f"Bearer {cfg['token']}", "Accept": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(url, headers=headers)
+        if r.status_code == 200:
+            return {"success": True, "raw": r.json()}
+        return {"success": False, "error": f"HTTP {r.status_code}", "raw": r.text[:400]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def extract_paid_status_from_pagbank(raw: dict) -> Optional[str]:
+    """Look at /orders or /checkouts response and return 'PAID' if any charge is paid."""
+    if not raw:
+        return None
+    # /orders structure: { charges: [{status, ...}] }
+    for charge in raw.get("charges") or []:
+        st = (charge.get("status") or "").upper()
+        if st == "PAID":
+            return "PAID"
+        if st in ("DECLINED", "CANCELED"):
+            return st
+    # /checkouts structure: { orders: [{ id, charges: [...] }] }
+    for o in raw.get("orders") or []:
+        for charge in o.get("charges") or []:
+            st = (charge.get("status") or "").upper()
+            if st == "PAID":
+                return "PAID"
+            if st in ("DECLINED", "CANCELED"):
+                return st
+    return None
