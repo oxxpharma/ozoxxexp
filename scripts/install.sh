@@ -99,11 +99,13 @@ ok "Código em $APP_DIR"
 
 # ---------- BACKEND: VENV + DEPS --------------------------------------------
 log "Criando virtualenv do backend..."
+# emergentintegrations vive num index privado da Emergent
+EMERGENT_INDEX="https://d33sy5i8bnduwe.cloudfront.net/simple/"
 sudo -u "$APP_USER" bash -lc "
     cd '$APP_DIR' && \
     $PYTHON_BIN -m venv venv && \
     ./venv/bin/pip install --upgrade pip wheel && \
-    ./venv/bin/pip install -r backend/requirements.txt && \
+    ./venv/bin/pip install --extra-index-url '$EMERGENT_INDEX' -r backend/requirements.txt && \
     ./venv/bin/pip install 'gunicorn>=21.0'
 "
 ok "Backend Python deps instaladas"

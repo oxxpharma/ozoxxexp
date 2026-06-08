@@ -55,7 +55,8 @@ fi
 # ---------- 2) BACKEND DEPS (se mudou) --------------------------------------
 if git -C "$APP_DIR" diff --name-only "$PREV_HASH" "$NEW_HASH" 2>/dev/null | grep -q '^backend/requirements\.txt$'; then
     log "requirements.txt mudou — atualizando venv..."
-    sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/backend/requirements.txt" >>"$LOG_FILE" 2>&1
+    EMERGENT_INDEX="https://d33sy5i8bnduwe.cloudfront.net/simple/"
+    sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" -r "$APP_DIR/backend/requirements.txt" >>"$LOG_FILE" 2>&1
     ok "Backend deps atualizadas"
 else
     ok "requirements.txt inalterado — pulei pip install"
