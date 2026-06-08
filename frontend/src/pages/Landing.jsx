@@ -43,7 +43,7 @@ export default function Landing() {
       <Navbar logoUrl={appearance.logo_url} logoSize={appearance.logo_size} />
 
       {/* HERO */}
-      <section className="relative min-h-screen flex items-end pb-24 pt-32 overflow-hidden">
+      <section className="relative min-h-[88vh] lg:min-h-screen flex items-center lg:items-end pb-12 lg:pb-24 pt-24 lg:pt-32 overflow-hidden">
         <div className="absolute inset-0">
           <img src={appearance.hero_image_url} alt="" className="w-full h-full object-cover opacity-70" />
           <div className="absolute inset-0 bg-gradient-to-b from-ozx-bg/60 via-ozx-bg/40 to-ozx-bg" />
@@ -63,22 +63,6 @@ export default function Landing() {
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 lg:gap-12 items-center">
-
-          {appearance.hero_side_image_url && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.2 }}
-              className="lg:hidden flex justify-center order-first relative -mt-12 mb-2 h-32 sm:h-40"
-              data-testid="hero-mobile-glow"
-            >
-              <motion.div
-                className="absolute inset-0 m-auto h-48 w-48 sm:h-64 sm:w-64 bg-ozx-primary/20 blur-[80px] rounded-full"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.55, 0.9, 0.55] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </motion.div>
-          )}
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
