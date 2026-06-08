@@ -27,6 +27,7 @@ from routes.emails_routes import router as emails_router
 from routes.password_reset_routes import router as password_reset_router
 from routes.tracking_routes import router as tracking_router, analytics_router
 from routes.speakers_routes import router as speakers_router, public_router as speakers_public_router
+from routes.cpf_discounts_routes import router as cpf_discounts_router, public_router as cpf_discounts_public_router
 from services.storage import init_storage
 from services.email_templates_seed import DEFAULT_TEMPLATES
 from services.scheduled_tasks import cleanup_loop, autopoll_loop
@@ -43,7 +44,8 @@ async def root():
 for r in (auth_router, password_reset_router, admin_router, public_router, orders_router, orders_admin_router,
           scanner_router, webhook_router, upload_router, lots_router, coupons_router, coupons_public_router,
           leaders_router, leaders_public_router, emails_router, tracking_router, analytics_router,
-          speakers_router, speakers_public_router):
+          speakers_router, speakers_public_router,
+          cpf_discounts_router, cpf_discounts_public_router):
     app.include_router(r)
 
 app.add_middleware(

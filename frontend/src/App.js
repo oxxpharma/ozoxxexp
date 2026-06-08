@@ -30,6 +30,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSpeakers from "./pages/admin/AdminSpeakers";
+import AdminCpfDiscounts from "./pages/admin/AdminCpfDiscounts";
 import Integrations from "./pages/admin/Integrations";
 
 function ParticipantRedirect({ children }) {
@@ -74,6 +75,7 @@ function AppRouter() {
           <Route path="emails" element={<AdminEmails />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="speakers" element={<AdminSpeakers />} />
+          <Route path="cpf-discounts" element={<AdminCpfDiscounts />} />
           <Route path="integrations" element={<Integrations />} />
         </Route>
       </Routes>

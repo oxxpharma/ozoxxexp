@@ -44,6 +44,12 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)
+- **Nova coleção `cpf_discounts`** com CPF, percentual, descrição, ativo, `used_count`
+- **CRUD admin** + **import em lote** (cola N CPFs, valida algoritmo brasileiro, ignora inválidos/duplicados) — `/admin/cpf-discounts`
+- **Aplicação automática no checkout**: ao digitar CPF (debounce 500ms), `GET /api/public/cpf-discount?cpf=...` retorna info; UI mostra toast "Desconto exclusivo de X% aplicado" e linha verde no resumo. Empilha com cupom (% sobre subtotal pós-cupom).
+- Pedido grava `cpf_discount_id`, `cpf_discount_percent`, `cpf_discount_value` para auditoria.
+
 ## Iteração 05/06/2026 — PagBank cartão, auto-confirmação e gestão de pedidos
 - **Cartão de crédito real**: implementado fluxo `POST /checkouts` (PagBank Checkout hospedado) com PIX+CREDIT_CARD habilitados, parcelamento em até 12x. Endpoint antigo `/orders` continua para PIX.
 - **Validação real de CPF/CNPJ** (algoritmo brasileiro) + fallback para CPF de teste em sandbox

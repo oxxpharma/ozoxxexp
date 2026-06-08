@@ -228,6 +228,20 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
                 discount = subtotal * (coupon["discount_value"] / 100)
             else:
                 discount = min(subtotal, coupon["discount_value"])
+
+    # CPF-based automatic discount — empilha com o cupom (se houver)
+    cpf_discount_doc = None
+    cpf_discount_value = 0
+    cpf_clean = "".join(c for c in (holder_cpf or "") if c.isdigit())
+    if cpf_clean:
+        cpf_discount_doc = await db.cpf_discounts.find_one(
+            {"cpf": cpf_clean, "is_active": True}, {"_id": 0}
+        )
+        if cpf_discount_doc:
+            # Aplica sobre o subtotal pós-cupom (não compounding sobre o desconto)
+            base = max(0, subtotal - discount)
+            cpf_discount_value = base * (cpf_discount_doc["discount_percent"] / 100)
+            discount += cpf_discount_value
     total_amount = max(0, subtotal - discount)
     amount_cents = int(round(total_amount * 100))
 
@@ -266,6 +280,9 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
         "has_companion": payload.has_companion,
         "companion": payload.companion.model_dump() if payload.companion else None,
         "coupon_code": coupon["code"] if coupon else None,
+        "cpf_discount_id": cpf_discount_doc["cpf_discount_id"] if cpf_discount_doc else None,
+        "cpf_discount_percent": cpf_discount_doc["discount_percent"] if cpf_discount_doc else None,
+        "cpf_discount_value": cpf_discount_value if cpf_discount_doc else 0,
         "utm": payload.utm.model_dump() if payload.utm else None,
         "leader_id": leader_id,
         "pagbank_order_id": None,
@@ -280,6 +297,11 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
 
     if coupon:
         await db.coupons.update_one({"coupon_id": coupon["coupon_id"]}, {"$inc": {"used_count": 1}})
+    if cpf_discount_doc:
+        await db.cpf_discounts.update_one(
+            {"cpf_discount_id": cpf_discount_doc["cpf_discount_id"]},
+            {"$inc": {"used_count": 1}},
+        )
 
     import os as _os
     _public_base = _os.environ.get("PUBLIC_BASE_URL")
@@ -396,6 +418,7 @@ async def get_order(order_id: str, request: Request):
         "pagbank_payment_link": order.get("pagbank_payment_link"),
         "has_companion": order.get("has_companion"), "credentials_generated": order.get("credentials_generated"),
         "discount": order.get("discount", 0), "subtotal": order.get("subtotal"), "coupon_code": order.get("coupon_code"),
+        "cpf_discount_percent": order.get("cpf_discount_percent"), "cpf_discount_value": order.get("cpf_discount_value", 0),
         "payment_error": order.get("payment_error"),
     }
     return public

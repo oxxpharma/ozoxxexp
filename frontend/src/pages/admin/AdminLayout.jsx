@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Palette, Users, Ticket, ShoppingCart, Settings2, CalendarRange, LogOut, ChevronLeft, Tag, Layers, Megaphone, Mail, BarChart3, Award, Mic } from "lucide-react";
+import { LayoutDashboard, Palette, Users, Ticket, ShoppingCart, Settings2, CalendarRange, LogOut, ChevronLeft, Tag, Layers, Megaphone, Mail, BarChart3, Award, Mic, IdCard } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../../components/ui/button";
 
@@ -11,6 +11,7 @@ const links = [
   { to: "/admin/tickets", label: "Ingressos", icon: Ticket },
   { to: "/admin/lots", label: "Lotes", icon: Layers },
   { to: "/admin/coupons", label: "Cupons", icon: Tag },
+  { to: "/admin/cpf-discounts", label: "Descontos CPF", icon: IdCard },
   { to: "/admin/speakers", label: "Palestrantes", icon: Mic },
   { to: "/admin/emails", label: "E-mails", icon: Mail },
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3 },

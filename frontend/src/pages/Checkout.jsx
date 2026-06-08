@@ -30,6 +30,7 @@ export default function Checkout() {
   const [method, setMethod] = useState("pix");
   const [coupon, setCoupon] = useState("");
   const [couponValid, setCouponValid] = useState(null);
+  const [cpfDiscount, setCpfDiscount] = useState(null); // {discount_percent, description}
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -66,7 +67,31 @@ export default function Checkout() {
     if (couponValid.discount_type === "percent") discount = subtotal * (couponValid.discount_value / 100);
     else discount = Math.min(subtotal, couponValid.discount_value);
   }
+  // CPF discount stacks on top of coupon (applied to post-coupon subtotal)
+  const postCouponBase = Math.max(0, subtotal - discount);
+  const cpfDiscountValue = cpfDiscount ? postCouponBase * (cpfDiscount.discount_percent / 100) : 0;
+  discount += cpfDiscountValue;
   const total = Math.max(0, subtotal - discount);
+
+  // Look up CPF discount automatically (debounced) whenever the holder CPF changes
+  useEffect(() => {
+    const cpfDigits = (holder.holder_cpf || "").replace(/\D/g, "");
+    if (cpfDigits.length !== 11) { setCpfDiscount(null); return; }
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/public/cpf-discount", { params: { cpf: cpfDigits } });
+        if (data.eligible) {
+          setCpfDiscount(data);
+          toast.success(`Desconto exclusivo de ${data.discount_percent}% aplicado!`);
+        } else {
+          setCpfDiscount(null);
+        }
+      } catch (e) {
+        setCpfDiscount(null);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [holder.holder_cpf]);
 
   const validateCoupon = async () => {
     if (!coupon.trim()) return;
@@ -226,7 +251,18 @@ export default function Checkout() {
                 <div className="space-y-3">
                   <div className="flex justify-between"><span className="text-ozx-muted text-sm">{ticket?.name} ({lot.name})</span><span>R$ {Number(lot.price).toFixed(2).replace(".", ",")}</span></div>
                   {hasCompanion && <div className="flex justify-between"><span className="text-ozx-muted text-sm">+ Acompanhante</span><span>R$ {Number(lot.price).toFixed(2).replace(".", ",")}</span></div>}
-                  {discount > 0 && <div className="flex justify-between text-ozx-success"><span className="text-sm">Desconto ({couponValid?.code})</span><span>- R$ {discount.toFixed(2).replace(".", ",")}</span></div>}
+                  {couponValid && (
+                    <div className="flex justify-between text-ozx-success" data-testid="checkout-coupon-line">
+                      <span className="text-sm">Cupom {couponValid.code}</span>
+                      <span>- R$ {(couponValid.discount_type === "percent" ? subtotal * (couponValid.discount_value / 100) : Math.min(subtotal, couponValid.discount_value)).toFixed(2).replace(".", ",")}</span>
+                    </div>
+                  )}
+                  {cpfDiscount && cpfDiscountValue > 0 && (
+                    <div className="flex justify-between text-ozx-success" data-testid="checkout-cpf-discount-line">
+                      <span className="text-sm">Desconto exclusivo CPF ({cpfDiscount.discount_percent}%)</span>
+                      <span>- R$ {cpfDiscountValue.toFixed(2).replace(".", ",")}</span>
+                    </div>
+                  )}
                   <div className="h-px bg-white/10 my-2" />
                   <div className="flex justify-between text-lg"><span>Total</span><span className="font-display text-2xl">R$ {total.toFixed(2).replace(".", ",")}</span></div>
                 </div>
