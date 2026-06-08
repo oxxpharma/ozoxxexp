@@ -95,7 +95,9 @@ if [ "$INSTALL_NGINX" = "yes" ]; then
         log "Instalando nginx..."
         apt-get install -y nginx
     fi
-    ok "Nginx instalado"
+    # Plugin do certbot para nginx (Let's Encrypt — emissão e renovação automáticas)
+    apt-get install -y certbot python3-certbot-nginx
+    ok "Nginx + certbot instalados"
 fi
 
 # ---------- USUÁRIO DA APLICAÇÃO --------------------------------------------
