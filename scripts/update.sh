@@ -76,8 +76,19 @@ log "Build do frontend → $NEW_BUILD_DIR (paralelo, build antigo continua servi
 
 # Se yarn.lock mudou, reinstala deps; senão pula install
 if git -C "$APP_DIR" diff --name-only "$PREV_HASH" "$NEW_HASH" 2>/dev/null | grep -q '^frontend/\(package\.json\|yarn\.lock\)$'; then
-    log "Dependências frontend mudaram — yarn install..."
-    sudo -u "$APP_USER" bash -lc "cd '$APP_DIR/frontend' && yarn install --frozen-lockfile" >>"$LOG_FILE" 2>&1
+    log "Dependências frontend mudaram — yarn install com retry..."
+    sudo -u "$APP_USER" bash -lc '
+        cd "'"$APP_DIR"'/frontend" || exit 1
+        REGISTRIES=("https://registry.yarnpkg.com" "https://registry.npmjs.org" "https://registry.yarnpkg.com")
+        for i in 1 2 3; do
+            REG="${REGISTRIES[$((i-1))]}"
+            if yarn install --frozen-lockfile --network-timeout 600000 --registry "$REG"; then
+                break
+            fi
+            [ "$i" = "3" ] && exit 1
+            sleep 5
+        done
+    ' >>"$LOG_FILE" 2>&1 || die "yarn install falhou após 3 tentativas — veja $LOG_FILE"
 fi
 
 # Build (saída padrão: frontend/build) — depois movemos para a pasta da release

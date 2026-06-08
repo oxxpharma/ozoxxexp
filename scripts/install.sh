@@ -153,11 +153,31 @@ ok "Backend Python deps instaladas"
 
 # ---------- FRONTEND: DEPS + BUILD ------------------------------------------
 log "Instalando deps + build do frontend..."
-sudo -u "$APP_USER" bash -lc "
-    cd '$APP_DIR/frontend' && \
-    yarn install --frozen-lockfile && \
+# Yarn não retenta após ESOCKETTIMEDOUT por default. Aumentamos o timeout
+# para 10min e fazemos até 3 tentativas, alternando para o registry do npm
+# se a 2ª falhar (registry.yarnpkg.com às vezes fica lento).
+sudo -u "$APP_USER" bash -lc '
+    cd "'"$APP_DIR"'/frontend" || exit 1
+    NETWORK_TIMEOUT=600000   # 10 minutos
+    REGISTRIES=("https://registry.yarnpkg.com" "https://registry.npmjs.org" "https://registry.yarnpkg.com")
+    for i in 1 2 3; do
+        REG="${REGISTRIES[$((i-1))]}"
+        echo "[yarn] Tentativa $i/3 — registry: $REG"
+        if yarn install --frozen-lockfile \
+              --network-timeout $NETWORK_TIMEOUT \
+              --registry "$REG"; then
+            echo "[yarn] Sucesso na tentativa $i"
+            break
+        fi
+        if [ "$i" = "3" ]; then
+            echo "[yarn] Falhou após 3 tentativas — verifique conexão"
+            exit 1
+        fi
+        echo "[yarn] Falhou — aguardando 5s e tentando novamente..."
+        sleep 5
+    done
     yarn build
-"
+'
 ok "Frontend build em $APP_DIR/frontend/build"
 
 # ---------- ARQUIVOS DE AMBIENTE (TEMPLATES) --------------------------------
