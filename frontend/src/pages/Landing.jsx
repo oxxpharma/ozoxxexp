@@ -3,7 +3,7 @@ import api from "../lib/api";
 import { motion } from "framer-motion";
 import { Button } from "../components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
-import { MapPin, Calendar, Sparkles, Users, Zap, Shield, ArrowRight, Music } from "lucide-react";
+import { MapPin, Calendar, Sparkles, Users, Zap, Shield, ArrowRight, Ticket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import Navbar from "../components/Navbar";
@@ -321,7 +321,7 @@ export default function Landing() {
                   {visibleLot.name}
                 </div>
               )}
-              <Music className={`w-8 h-8 mb-6 ${isSoldOut ? "text-ozx-muted" : "text-ozx-primary"}`} />
+              <Ticket className={`w-8 h-8 mb-6 ${isSoldOut ? "text-ozx-muted" : "text-ozx-primary"}`} />
               <h3 className="font-display text-3xl font-medium mb-2">{t.name}</h3>
               <p className="text-ozx-muted text-sm leading-relaxed mb-6">{t.description}</p>
               {visibleLot ? (
@@ -341,16 +341,7 @@ export default function Landing() {
                   )}
                   {!isSoldOut && (
                     <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-ozx-warning flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-ozx-warning animate-pulse" />
-                          {visibleLot.progress_pct}% vendidos
-                        </span>
-                        <span className="text-ozx-muted">{visibleLot.remaining}/{visibleLot.quantity}</span>
-                      </div>
-                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-ozx-warning to-ozx-danger" style={{ width: `${Math.min(100, visibleLot.progress_pct)}%` }} />
-                      </div>
+                      <p className="text-xs text-ozx-muted">{visibleLot.remaining}/{visibleLot.quantity} disponíveis</p>
                     </div>
                   )}
                   {visibleLot.valid_until && !isSoldOut && (
