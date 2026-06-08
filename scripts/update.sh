@@ -95,6 +95,7 @@ fi
 sudo -u "$APP_USER" bash -lc "
     cd '$APP_DIR/frontend' && \
     rm -rf build.new && \
+    NODE_OPTIONS='--max-old-space-size=4096' \
     BUILD_PATH='$APP_DIR/frontend/build.new' yarn build
 " >>"$LOG_FILE" 2>&1 || die "Build do frontend falhou — veja $LOG_FILE"
 

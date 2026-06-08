@@ -151,6 +151,23 @@ sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT
 sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install 'gunicorn>=21.0'
 ok "Backend Python deps instaladas"
 
+# ---------- SWAP (se RAM baixa) ---------------------------------------------
+# Build do React (webpack) consome 1-2 GB de heap. Em VPSs pequenos (<= 2 GB RAM)
+# isso causa "JavaScript heap out of memory". Criamos 4 GB de swap se necessário.
+MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+SWAP_MB=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
+if [ "$MEM_MB" -lt 3000 ] && [ "$SWAP_MB" -lt 2000 ] && [ ! -f /swapfile ]; then
+    log "RAM=${MEM_MB}MB / Swap=${SWAP_MB}MB — criando 4GB de swap (/swapfile)..."
+    fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+    swapon /swapfile
+    grep -q "^/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab
+    ok "Swap ativo: $(swapon --show=NAME,SIZE --noheadings | head -1)"
+else
+    ok "RAM=${MEM_MB}MB / Swap=${SWAP_MB}MB — suficiente"
+fi
+
 # ---------- FRONTEND: DEPS + BUILD ------------------------------------------
 log "Instalando deps + build do frontend..."
 # Yarn não retenta após ESOCKETTIMEDOUT por default. Aumentamos o timeout
@@ -176,7 +193,8 @@ sudo -u "$APP_USER" bash -lc '
         echo "[yarn] Falhou — aguardando 5s e tentando novamente..."
         sleep 5
     done
-    yarn build
+    # Build com heap aumentado (4GB) — evita "JavaScript heap out of memory"
+    NODE_OPTIONS="--max-old-space-size=4096" yarn build
 '
 ok "Frontend build em $APP_DIR/frontend/build"
 
