@@ -7,7 +7,15 @@
 set -euo pipefail
 
 # ---------- CONFIG -----------------------------------------------------------
-APP_DIR="${APP_DIR:-/opt/ozoxx}"
+# Auto-detecta APP_DIR: se rodado de dentro de um projeto (tem backend/ e frontend/),
+# usa essa pasta. Caso contrário, default = /opt/ozoxx.
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_AUTO_APP_DIR="$(cd "$_SCRIPT_DIR/.." 2>/dev/null && pwd || echo "")"
+if [ -d "$_AUTO_APP_DIR/backend" ] && [ -d "$_AUTO_APP_DIR/frontend" ]; then
+    APP_DIR="${APP_DIR:-$_AUTO_APP_DIR}"
+else
+    APP_DIR="${APP_DIR:-/opt/ozoxx}"
+fi
 APP_USER="${APP_USER:-ozoxx}"
 NODE_VERSION="${NODE_VERSION:-20}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.11}"
@@ -100,15 +108,18 @@ ok "Usuário $APP_USER ok"
 # ---------- DIRETÓRIOS -------------------------------------------------------
 log "Preparando diretório da aplicação em $APP_DIR..."
 mkdir -p "$APP_DIR" "$APP_DIR/releases" "$APP_DIR/logs"
-# Se este script for executado de dentro do checkout do projeto, copia tudo.
+# Se este script for executado de FORA do APP_DIR e o projeto estiver em outro lugar,
+# copia tudo para o APP_DIR. Caso contrário (já estamos dentro), apenas reutiliza.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-if [ -d "$PROJECT_ROOT/backend" ] && [ -d "$PROJECT_ROOT/frontend" ] && [ "$PROJECT_ROOT" != "$APP_DIR" ]; then
+if [ "$PROJECT_ROOT" != "$APP_DIR" ] && [ -d "$PROJECT_ROOT/backend" ] && [ -d "$PROJECT_ROOT/frontend" ]; then
     log "Copiando código de $PROJECT_ROOT → $APP_DIR ..."
     rsync -a --delete \
         --exclude .git --exclude node_modules --exclude venv --exclude __pycache__ \
         --exclude "frontend/build" --exclude ".env" \
         "$PROJECT_ROOT/" "$APP_DIR/"
+else
+    log "Aplicação já está em $APP_DIR — reutilizando"
 fi
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 ok "Código em $APP_DIR"
@@ -120,10 +131,15 @@ EMERGENT_INDEX="https://d33sy5i8bnduwe.cloudfront.net/simple/"
 sudo -u "$APP_USER" bash -lc "
     cd '$APP_DIR' && \
     $PYTHON_BIN -m venv venv && \
-    ./venv/bin/pip install --upgrade pip wheel && \
-    ./venv/bin/pip install --extra-index-url '$EMERGENT_INDEX' -r backend/requirements.txt && \
-    ./venv/bin/pip install 'gunicorn>=21.0'
+    ./venv/bin/pip install --upgrade pip wheel
 "
+# emergentintegrations precisa ser instalado ANTES do requirements.txt porque
+# ele traz 'litellm' via URL — se o requirements.txt declarar litellm também,
+# o pip não consegue resolver os dois como o mesmo pacote e dá ResolutionImpossible.
+sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" emergentintegrations==0.2.0
+# Agora instala o resto (litellm já satisfeito pela etapa anterior)
+sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" -r "$APP_DIR/backend/requirements.txt"
+sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install 'gunicorn>=21.0'
 ok "Backend Python deps instaladas"
 
 # ---------- FRONTEND: DEPS + BUILD ------------------------------------------

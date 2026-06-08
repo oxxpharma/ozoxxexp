@@ -56,6 +56,8 @@ fi
 if git -C "$APP_DIR" diff --name-only "$PREV_HASH" "$NEW_HASH" 2>/dev/null | grep -q '^backend/requirements\.txt$'; then
     log "requirements.txt mudou — atualizando venv..."
     EMERGENT_INDEX="https://d33sy5i8bnduwe.cloudfront.net/simple/"
+    # Instala emergentintegrations ANTES (traz litellm via URL e evita conflito)
+    sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" emergentintegrations==0.2.0 >>"$LOG_FILE" 2>&1
     sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" -r "$APP_DIR/backend/requirements.txt" >>"$LOG_FILE" 2>&1
     ok "Backend deps atualizadas"
 else
