@@ -128,17 +128,26 @@ ok "Código em $APP_DIR"
 log "Criando virtualenv do backend..."
 # emergentintegrations vive num index privado da Emergent
 EMERGENT_INDEX="https://d33sy5i8bnduwe.cloudfront.net/simple/"
+
 sudo -u "$APP_USER" bash -lc "
     cd '$APP_DIR' && \
     $PYTHON_BIN -m venv venv && \
     ./venv/bin/pip install --upgrade pip wheel
 "
-# emergentintegrations precisa ser instalado ANTES do requirements.txt porque
-# ele traz 'litellm' via URL — se o requirements.txt declarar litellm também,
-# o pip não consegue resolver os dois como o mesmo pacote e dá ResolutionImpossible.
+
+# emergentintegrations declara 'litellm @ URL' como dependência. Se o requirements.txt
+# também declarar 'litellm @ URL' (mesmo idêntico), o pip 24+ recusa unificar dois
+# requisitos diretos por URL → ResolutionImpossible.
+# Solução robusta: gera um requirements_no_litellm.txt sem essa linha e
+# instala 'emergentintegrations' (que traz litellm correto) separadamente.
+REQ_SRC="$APP_DIR/backend/requirements.txt"
+REQ_FILTERED="$APP_DIR/backend/requirements.filtered.txt"
+grep -viE '^(litellm[[:space:]]*[@=<>!~]|emergentintegrations[[:space:]]*[@=<>!~])' "$REQ_SRC" > "$REQ_FILTERED"
+chown "$APP_USER:$APP_USER" "$REQ_FILTERED"
+log "Instalando emergentintegrations (traz litellm transitivamente)..."
 sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" emergentintegrations==0.2.0
-# Agora instala o resto (litellm já satisfeito pela etapa anterior)
-sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" -r "$APP_DIR/backend/requirements.txt"
+log "Instalando demais dependências do backend..."
+sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --extra-index-url "$EMERGENT_INDEX" -r "$REQ_FILTERED"
 sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install 'gunicorn>=21.0'
 ok "Backend Python deps instaladas"
 
