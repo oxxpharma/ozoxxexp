@@ -339,13 +339,8 @@ export default function Landing() {
                       </div>
                     </>
                   )}
-                  {!isSoldOut && (
-                    <div className="mt-3">
-                      <p className="text-xs text-ozx-muted">{visibleLot.remaining}/{visibleLot.quantity} disponíveis</p>
-                    </div>
-                  )}
                   {visibleLot.valid_until && !isSoldOut && (
-                    <p className="text-xs text-ozx-muted mt-2">Válido até {new Date(visibleLot.valid_until).toLocaleDateString("pt-BR")}</p>
+                    <p className="text-xs text-ozx-muted mt-3">Válido até {new Date(visibleLot.valid_until).toLocaleDateString("pt-BR")}</p>
                   )}
                 </div>
               ) : (
