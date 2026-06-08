@@ -109,7 +109,7 @@ ok "Usuário $APP_USER ok"
 
 # ---------- DIRETÓRIOS -------------------------------------------------------
 log "Preparando diretório da aplicação em $APP_DIR..."
-mkdir -p "$APP_DIR" "$APP_DIR/releases" "$APP_DIR/logs"
+mkdir -p "$APP_DIR" "$APP_DIR/releases" "$APP_DIR/logs" "$APP_DIR/uploads"
 # Se este script for executado de FORA do APP_DIR e o projeto estiver em outro lugar,
 # copia tudo para o APP_DIR. Caso contrário (já estamos dentro), apenas reutiliza.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -210,6 +210,8 @@ JWT_SECRET="$(openssl rand -hex 32)"
 APP_NAME="ozoxx"
 ENABLE_DEV_SIMULATE_PAY="false"
 PUBLIC_BASE_URL="${DOMAIN:+https://$DOMAIN}"
+STORAGE_BACKEND="local"
+LOCAL_STORAGE_DIR="$APP_DIR/uploads"
 EOF
     chown "$APP_USER:$APP_USER" "$APP_DIR/backend/.env"
     warn "backend/.env criado com JWT_SECRET aleatório. Revise as variáveis."
