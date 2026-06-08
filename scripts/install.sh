@@ -10,7 +10,8 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/opt/ozoxx}"
 APP_USER="${APP_USER:-ozoxx}"
 NODE_VERSION="${NODE_VERSION:-20}"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+PYTHON_VERSION="${PYTHON_VERSION:-3.11}"
+PYTHON_BIN="${PYTHON_BIN:-python${PYTHON_VERSION}}"
 INSTALL_MONGO="${INSTALL_MONGO:-yes}"        # yes|no — set "no" se for usar Atlas/remoto
 INSTALL_NGINX="${INSTALL_NGINX:-yes}"        # yes|no
 DOMAIN="${DOMAIN:-}"                          # ex: ozoxx.com (opcional, só p/ nginx)
@@ -28,11 +29,26 @@ log "Atualizando índice apt e instalando pacotes base..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y \
-    curl ca-certificates gnupg lsb-release \
+    curl ca-certificates gnupg lsb-release software-properties-common \
     git build-essential pkg-config \
-    python3 python3-venv python3-pip \
     supervisor jq rsync ufw
 ok "Pacotes base instalados"
+
+# ---------- PYTHON ${PYTHON_VERSION} ----------------------------------------
+if ! command -v "$PYTHON_BIN" >/dev/null; then
+    log "Python $PYTHON_VERSION não encontrado — instalando via deadsnakes PPA..."
+    # deadsnakes só existe oficialmente para Ubuntu. Em Debian, instalamos do source.
+    if [ -f /etc/os-release ] && grep -qi ubuntu /etc/os-release; then
+        add-apt-repository -y ppa:deadsnakes/ppa
+        apt-get update -y
+        apt-get install -y "python${PYTHON_VERSION}" "python${PYTHON_VERSION}-venv" "python${PYTHON_VERSION}-dev"
+    else
+        warn "Debian detectado — tentando 'python3.11' do repositório oficial"
+        apt-get install -y "python${PYTHON_VERSION}" "python${PYTHON_VERSION}-venv" "python${PYTHON_VERSION}-dev" || \
+            die "Instale manualmente Python $PYTHON_VERSION e rode novamente"
+    fi
+fi
+ok "$($PYTHON_BIN --version)"
 
 # ---------- NODE.JS + YARN ---------------------------------------------------
 if ! command -v node >/dev/null || [[ "$(node -v 2>/dev/null | sed 's/v//;s/\..*//')" -lt "$NODE_VERSION" ]]; then
