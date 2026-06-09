@@ -44,10 +44,11 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
-## Iteração 09/06/2026 — Guest checkout password + Payment error UI amigável
-- **Senha no checkout para guests**: campos opcionais "Definir senha" + "Confirmar senha" em `Checkout.jsx`. Backend (`/api/orders`) cria usuário com `password_hash` na hora do checkout quando guest, evitando `user_id=None` órfão.
-- **Mensagem de erro PagBank amigável** em `Payment.jsx`: ao receber `payment_error`, classifica em CPF/e-mail/telefone vs erro genérico, mostra título + dica em pt-BR, com botão "← Voltar para o formulário" (para erros de dados) e "Tentar novamente com PagBank". Detalhes técnicos em `<details>` colapsável.
-- Texto "12x" → "10x sem juros" alinhado ao parcelamento real do PagBank.
+## Iteração 09/06/2026 — Reativar contas antigas + UI de erro Payment
+- **Botão admin "Reativar contas antigas"** em `/admin/users`: novos endpoints `GET /api/admin/users-actions/orphan-buyers` (preview com contadores) e `POST /api/admin/users-actions/reactivate` (cria usuário com `role=participante` + token de reset válido por 7 dias + envia e-mail via Resend usando template `tpl_account_reactivation`). Vincula pedidos órfãos (`user_id=None`) ao usuário recém-criado. Suporta `dry_run` e `send_emails=false`.
+- **Senha no checkout para guests**: campos opcionais em `Checkout.jsx`. Backend cria usuário com `password_hash` no `/api/orders`, evitando `user_id=None` órfão.
+- **Mensagem de erro PagBank amigável** em `Payment.jsx`: classifica CPF/e-mail/telefone, mostra dica em pt-BR + botão "← Voltar para o formulário".
+- Texto "12x" → "10x sem juros".
 
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)
 - **Nova coleção `cpf_discounts`** com CPF, percentual, descrição, ativo, `used_count`

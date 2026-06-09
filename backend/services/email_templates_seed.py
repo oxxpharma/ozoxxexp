@@ -73,4 +73,25 @@ DEFAULT_TEMPLATES = [
 </div>
 """,
     },
+    {
+        "template_id": "tpl_account_reactivation",
+        "name": "Reativação de conta (comprador antigo)",
+        "subject": "Acesse seu painel — {{event_name}}",
+        "description": "Enviado pelo admin para compradores que ainda não tinham conta",
+        "html": """
+<div style="font-family:Arial,sans-serif;background:#070b1e;padding:40px;color:#fff">
+  <table width="560" align="center" style="background:#101638;border-radius:16px;padding:32px;color:#fff">
+    <tr><td>
+      <h1 style="color:#28b9fc;margin:0 0 12px 0">Sua conta {{event_name}} está pronta</h1>
+      <p style="color:#a0a8c0">Olá {{name}},</p>
+      <p style="color:#a0a8c0">Criamos sua conta para você acessar sua credencial, o QR Code de entrada e os detalhes do seu pedido. Para começar, defina uma senha agora — o link é válido por 7 dias.</p>
+      <p style="text-align:center;margin:32px 0">
+        <a href="{{reset_link}}" style="background:#28b9fc;color:#070b1e;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:bold;display:inline-block">Definir minha senha</a>
+      </p>
+      <p style="color:#a0a8c0;font-size:12px">Se você não comprou um ingresso conosco, pode ignorar este e-mail com segurança.</p>
+    </td></tr>
+  </table>
+</div>
+""",
+    },
 ]
