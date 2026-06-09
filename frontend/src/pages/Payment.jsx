@@ -28,10 +28,10 @@ export default function Payment() {
   };
 
   useEffect(() => {
-    fetchOrder();
-    if (!polling) return;
+    const t = setTimeout(fetchOrder, 0);
+    if (!polling) return () => clearTimeout(t);
     const id = setInterval(fetchOrder, 6000);
-    return () => clearInterval(id);
+    return () => { clearTimeout(t); clearInterval(id); };
   }, [orderId, polling]); // eslint-disable-line
 
   const retry = async () => {
@@ -139,15 +139,56 @@ export default function Payment() {
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-ozx-warning/10 border border-ozx-warning/30 rounded-2xl p-5">
-                  <p className="text-sm text-ozx-warning">⚠ Integração PagBank ainda não configurada pelo administrador, ou houve falha temporária.</p>
-                  {order.payment_error && <p className="text-xs text-ozx-muted mt-2">{order.payment_error}</p>}
-                  <Button onClick={retry} variant="outline" className="mt-4 border-white/15 text-white" data-testid="payment-try-pagbank">
-                    Tentar novamente com PagBank
-                  </Button>
-                </div>
-              )}
+              ) : (() => {
+                // Classifica o erro para mostrar mensagem amigável + ação certa
+                const err = (order.payment_error || "").toLowerCase();
+                const isCpfError = err.includes("cpf") || err.includes("cnpj") || err.includes("tax_id");
+                const isEmailError = err.includes("email") || err.includes("e-mail");
+                const isPhoneError = err.includes("phone") || err.includes("telefone");
+                const isDataError = isCpfError || isEmailError || isPhoneError;
+                let title, hint;
+                if (isCpfError) {
+                  title = "CPF/CNPJ inválido";
+                  hint = "O CPF informado não passou na validação. Volte ao formulário e confira se digitou corretamente.";
+                } else if (isEmailError) {
+                  title = "E-mail inválido";
+                  hint = "O e-mail informado não é válido. Volte ao formulário e confira.";
+                } else if (isPhoneError) {
+                  title = "Telefone inválido";
+                  hint = "O telefone informado não é válido. Volte ao formulário e confira.";
+                } else {
+                  title = "Não foi possível iniciar o pagamento";
+                  hint = "Tente novamente em alguns instantes. Se o erro persistir, fale com o suporte.";
+                }
+                return (
+                  <div className={`${isDataError ? "bg-ozx-danger/10 border-ozx-danger/30" : "bg-ozx-warning/10 border-ozx-warning/30"} border rounded-2xl p-5`} data-testid="payment-error-box">
+                    <p className={`text-sm font-semibold mb-1 ${isDataError ? "text-ozx-danger" : "text-ozx-warning"}`}>
+                      ⚠ {title}
+                    </p>
+                    <p className="text-sm text-white/80 leading-relaxed">{hint}</p>
+                    {order.payment_error && (
+                      <details className="mt-3">
+                        <summary className="text-xs text-ozx-muted cursor-pointer hover:text-white transition">Ver detalhes técnicos</summary>
+                        <p className="text-xs text-ozx-muted mt-1.5 font-mono">{order.payment_error}</p>
+                      </details>
+                    )}
+                    <div className="flex flex-col sm:flex-row gap-2 mt-5">
+                      {isDataError && (
+                        <Button
+                          onClick={() => navigate("/checkout")}
+                          className="bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full"
+                          data-testid="payment-back-to-checkout"
+                        >
+                          ← Voltar para o formulário
+                        </Button>
+                      )}
+                      <Button onClick={retry} variant="outline" className="border-white/15 text-white" data-testid="payment-try-pagbank">
+                        Tentar novamente com PagBank
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </motion.div>

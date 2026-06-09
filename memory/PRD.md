@@ -44,6 +44,11 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 09/06/2026 — Guest checkout password + Payment error UI amigável
+- **Senha no checkout para guests**: campos opcionais "Definir senha" + "Confirmar senha" em `Checkout.jsx`. Backend (`/api/orders`) cria usuário com `password_hash` na hora do checkout quando guest, evitando `user_id=None` órfão.
+- **Mensagem de erro PagBank amigável** em `Payment.jsx`: ao receber `payment_error`, classifica em CPF/e-mail/telefone vs erro genérico, mostra título + dica em pt-BR, com botão "← Voltar para o formulário" (para erros de dados) e "Tentar novamente com PagBank". Detalhes técnicos em `<details>` colapsável.
+- Texto "12x" → "10x sem juros" alinhado ao parcelamento real do PagBank.
+
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)
 - **Nova coleção `cpf_discounts`** com CPF, percentual, descrição, ativo, `used_count`
 - **CRUD admin** + **import em lote** (cola N CPFs, valida algoritmo brasileiro, ignora inválidos/duplicados) — `/admin/cpf-discounts`
