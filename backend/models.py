@@ -272,7 +272,9 @@ class OrderStatusUpdate(BaseModel):
 class IntegrationsConfig(BaseModel):
     pagbank_email: Optional[str] = ""
     pagbank_token: Optional[str] = ""
+    pagbank_v2_token: Optional[str] = ""
     pagbank_sandbox: bool = True
+    pagbank_use_v2: bool = False
     pagbank_webhook_secret: Optional[str] = ""
     resend_api_key: Optional[str] = ""
     resend_sender: Optional[str] = "onboarding@resend.dev"

@@ -8,6 +8,7 @@ from services.pagbank import (
     get_checkout_status as pb_get_checkout,
     extract_paid_status_from_pagbank,
     resolve_checkout_status as pb_resolve_checkout,
+    get_v2_transaction_by_notification as pb_v2_notif,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,31 @@ def _possible_ids(payload: dict) -> list:
 
 @router.post("/pagbank")
 async def pagbank_webhook(request: Request):
-    """Handles PagBank notifications for both /orders (PIX) and /checkouts (credit card)."""
+    """Handles PagBank notifications for both V4 (/orders, /checkouts JSON) and V2 (legacy form)."""
+    # ---- V2 LEGACY: form-encoded body with notificationCode + notificationType ----
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        try:
+            form = await request.form()
+        except Exception:
+            form = {}
+        notif_code = (form.get("notificationCode") or "").strip()
+        if notif_code:
+            logger.info(f"PagBank V2 webhook notificationCode={notif_code}")
+            v2 = await pb_v2_notif(notif_code)
+            if not v2.get("success"):
+                logger.warning(f"V2 notif lookup failed: {v2.get('error')}")
+                return {"ok": True, "v2_lookup_failed": True}
+            ref = v2.get("reference_id") or ""
+            order = await db.orders.find_one({"order_id": ref}, {"_id": 0})
+            if not order:
+                return {"ok": True, "not_found": True}
+            new_status = v2.get("status")
+            if new_status:
+                await _apply_status_to_order(order, new_status)
+            return {"ok": True, "status": new_status, "order_id": order["order_id"]}
+
+    # ---- V4 JSON payload (legacy code path) ----
     try:
         payload = await request.json()
     except Exception:

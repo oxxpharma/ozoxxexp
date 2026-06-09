@@ -15,12 +15,158 @@ async def get_pagbank_config():
     if not settings:
         return None
     token = settings.get("pagbank_token") or ""
+    v2_token = settings.get("pagbank_v2_token") or ""
     # Strip whitespace/newlines — copia do painel PagBank às vezes vem com \n no final
     return {
         "token": token.strip(),
-        "email": settings.get("pagbank_email"),
+        "v2_token": v2_token.strip(),
+        "email": (settings.get("pagbank_email") or "").strip(),
         "sandbox": settings.get("pagbank_sandbox", True),
+        "use_v2": bool(settings.get("pagbank_use_v2", False)),
     }
+
+
+# ---------- V2 LEGACY (Pagamento Padrão — sem homologação) ------------------
+V2_SANDBOX_BASE = "https://ws.sandbox.pagseguro.uol.com.br"
+V2_PRODUCTION_BASE = "https://ws.pagseguro.uol.com.br"
+V2_PAY_SANDBOX = "https://sandbox.pagseguro.uol.com.br/v2/checkout/payment.html"
+V2_PAY_PRODUCTION = "https://pagseguro.uol.com.br/v2/checkout/payment.html"
+
+
+def v2_base(sandbox: bool) -> str:
+    return V2_SANDBOX_BASE if sandbox else V2_PRODUCTION_BASE
+
+
+def v2_pay_base(sandbox: bool) -> str:
+    return V2_PAY_SANDBOX if sandbox else V2_PAY_PRODUCTION
+
+
+async def create_v2_checkout(
+    *,
+    reference_id: str,
+    customer_name: str,
+    customer_email: str,
+    customer_cpf: str,
+    customer_phone: str,
+    amount_cents: int,
+    description: str,
+    redirect_url: str,
+    notification_url: Optional[str] = None,
+) -> dict:
+    """Cria um checkout PagSeguro V2 (Pagamento Padrão) — não requer homologação.
+
+    Retorna payment_link para redirecionar o cliente. A página V2 hospedada da
+    PagBank mostra cartão, boleto, PIX e saldo PagBank (conforme habilitado na
+    conta do lojista). Parcelamento sem juros respeita a configuração da conta.
+    """
+    import xml.etree.ElementTree as ET
+
+    cfg = await get_pagbank_config()
+    if not cfg:
+        return {"success": False, "error": "PagBank não configurado"}
+    email = cfg.get("email")
+    v2_token = cfg.get("v2_token") or cfg.get("token")  # fallback p/ token v4 se v2 não setado
+    if not email or not v2_token:
+        return {"success": False, "error": "Para usar V2 informe e-mail e token no admin"}
+
+    cpf_clean = _digits(customer_cpf)
+    cpf_or_cnpj_valid = _is_valid_cpf(cpf_clean) or _is_valid_cnpj(cpf_clean)
+    if not cpf_or_cnpj_valid:
+        if cfg.get("sandbox"):
+            cpf_clean = SANDBOX_TEST_CPF
+        else:
+            return {"success": False, "error": "CPF/CNPJ inválido. Verifique e tente novamente."}
+
+    phone_digits = _digits(customer_phone)
+    area = phone_digits[:2] if len(phone_digits) >= 10 else "11"
+    num = phone_digits[2:] if len(phone_digits) >= 10 else "999999999"
+
+    amount_brl = f"{amount_cents / 100:.2f}"
+
+    form = {
+        "currency": "BRL",
+        "reference": reference_id,
+        "itemId1": "001",
+        "itemDescription1": description[:100],
+        "itemAmount1": amount_brl,
+        "itemQuantity1": "1",
+        "senderName": (customer_name or "Cliente")[:50],
+        "senderEmail": customer_email,
+        "senderCPF": cpf_clean,
+        "senderAreaCode": area,
+        "senderPhone": num,
+    }
+    if redirect_url:
+        form["redirectURL"] = redirect_url
+    if notification_url:
+        form["notificationURL"] = notification_url
+
+    url = f"{v2_base(cfg['sandbox'])}/v2/checkout"
+    params = {"email": email, "token": v2_token}
+    headers = {"Content-Type": "application/x-www-form-urlencoded; charset=ISO-8859-1"}
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(url, params=params, data=form, headers=headers)
+        if r.status_code != 200:
+            logger.error(f"PagBank V2 falhou {r.status_code}: {r.text[:500]}")
+            msg = f"PagBank V2 {r.status_code}"
+            try:
+                root = ET.fromstring(r.text)
+                first_err = root.find(".//message")
+                if first_err is not None and first_err.text:
+                    msg = f"PagBank V2 {r.status_code}: {first_err.text}"
+            except Exception:
+                pass
+            return {"success": False, "error": msg, "raw": r.text[:1000]}
+
+        root = ET.fromstring(r.text)
+        code_el = root.find("code")
+        if code_el is None or not code_el.text:
+            return {"success": False, "error": "PagBank V2 — sem código de checkout", "raw": r.text[:500]}
+        checkout_code = code_el.text.strip()
+        payment_link = f"{v2_pay_base(cfg['sandbox'])}?code={checkout_code}"
+        return {
+            "success": True,
+            "checkout_id": checkout_code,
+            "payment_link": payment_link,
+            "raw": r.text,
+            "is_v2": True,
+        }
+    except Exception as e:
+        logger.exception("PagBank V2 checkout request failed")
+        return {"success": False, "error": str(e)}
+
+
+async def get_v2_transaction_by_notification(notification_code: str) -> dict:
+    """V2 envia POST com notificationCode — buscamos a transação para descobrir status."""
+    import xml.etree.ElementTree as ET
+    cfg = await get_pagbank_config()
+    if not cfg:
+        return {"success": False, "error": "PagBank não configurado"}
+    email = cfg.get("email")
+    v2_token = cfg.get("v2_token") or cfg.get("token")
+    url = f"{v2_base(cfg['sandbox'])}/v3/transactions/notifications/{notification_code}"
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(url, params={"email": email, "token": v2_token})
+        if r.status_code != 200:
+            return {"success": False, "error": f"V2 notif {r.status_code}", "raw": r.text[:500]}
+        root = ET.fromstring(r.text)
+        # status V2: 1=Aguardando, 2=Em análise, 3=Paga, 4=Disponível, 5=Em disputa,
+        #            6=Devolvida, 7=Cancelada
+        status_code = (root.findtext("status") or "").strip()
+        reference = (root.findtext("reference") or "").strip()
+        mapping = {
+            "1": "WAITING", "2": "IN_ANALYSIS", "3": "PAID", "4": "PAID",
+            "5": "WAITING", "6": "REFUNDED", "7": "CANCELED",
+        }
+        return {"success": True, "status": mapping.get(status_code, "WAITING"), "reference_id": reference, "raw": r.text}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ---------- V4 (mantido como estava) ----------------------------------------
 
 
 def base_url(sandbox: bool) -> str:

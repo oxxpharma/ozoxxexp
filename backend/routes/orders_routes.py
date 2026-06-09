@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from db import db
 from models import OrderCreate, ManualOrderCreate, OrderStatusUpdate, gen_id, now_iso
 from auth import get_current_user, require_roles
-from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout, get_checkout_status as pb_get_checkout, extract_paid_status_from_pagbank, resolve_checkout_status as pb_resolve_checkout
+from services.pagbank import create_order as pb_create_order, get_order_status as pb_get_status, create_checkout as pb_create_checkout, get_checkout_status as pb_get_checkout, extract_paid_status_from_pagbank, resolve_checkout_status as pb_resolve_checkout, create_v2_checkout as pb_create_v2, get_pagbank_config as pb_get_config
 from services.qrcode_gen import generate_qr_png_base64
 from services.email_service import send_credential_email
 from services.pdf_gen import generate_credential_pdf
@@ -307,11 +307,45 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
     _public_base = _os.environ.get("PUBLIC_BASE_URL")
     _api_origin = _public_base or f"{request.url.scheme}://{request.headers.get('host', '')}"
     notif_url = f"{_api_origin}/api/webhook/pagbank"
+
+    # Check if V2 legacy mode is enabled (no homologation required)
+    pb_cfg = await pb_get_config()
+    use_v2 = bool(pb_cfg and pb_cfg.get("use_v2"))
+    origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
+    redirect_url = f"{origin}/payment/{order_id}"
+
     if total_amount > 0:
-        if payload.payment_method == "credit_card":
-            # Hosted checkout flow — redirects user to PagBank page for card payment
-            origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
-            redirect_url = f"{origin}/payment/{order_id}"
+        if use_v2:
+            # V2 legacy: single hosted checkout for ALL payment methods (card/pix/boleto)
+            # User picks payment method on PagBank's page. No homologation needed.
+            pb = await pb_create_v2(
+                reference_id=order_id,
+                customer_name=holder_name, customer_email=holder_email,
+                customer_cpf=holder_cpf, customer_phone=holder_phone,
+                amount_cents=amount_cents,
+                description=f"{ticket['name']} ({qty}x) — Ozoxx Experience",
+                redirect_url=redirect_url, notification_url=notif_url,
+            )
+            if pb.get("success"):
+                await db.orders.update_one({"order_id": order_id}, {"$set": {
+                    "pagbank_checkout_id": pb.get("checkout_id"),
+                    "pagbank_payment_link": pb.get("payment_link"),
+                    "pagbank_v2": True,
+                    "updated_at": now_iso(),
+                }, "$unset": {"payment_error": ""}})
+                order["pagbank_checkout_id"] = pb.get("checkout_id")
+                order["pagbank_payment_link"] = pb.get("payment_link")
+                order["pagbank_v2"] = True
+                order["payment_ready"] = True
+            else:
+                error_msg = pb.get("error", "PagBank indisponível")
+                await db.orders.update_one({"order_id": order_id}, {"$set": {
+                    "payment_error": error_msg, "updated_at": now_iso(),
+                }})
+                order["payment_ready"] = False
+                order["payment_error"] = error_msg
+        elif payload.payment_method == "credit_card":
+            # V4 hosted checkout (requires homologation)
             pb = await pb_create_checkout(
                 reference_id=order_id,
                 customer_name=holder_name,
