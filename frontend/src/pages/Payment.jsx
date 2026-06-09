@@ -96,7 +96,7 @@ export default function Payment() {
                 <div className="space-y-4" data-testid="payment-card-checkout">
                   <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
                     <p className="text-sm text-ozx-muted leading-relaxed">
-                      O pagamento com <span className="text-white font-medium">cartão de crédito</span> será concluído de forma segura no ambiente do PagBank. Você poderá parcelar em até 12x.
+                      O pagamento com <span className="text-white font-medium">cartão de crédito</span> será concluído de forma segura no ambiente do PagBank. Você poderá parcelar em até 10x sem juros.
                     </p>
                   </div>
                   <Button
