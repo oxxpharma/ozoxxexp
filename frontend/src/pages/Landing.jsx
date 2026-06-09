@@ -387,9 +387,12 @@ export default function Landing() {
               ) : (
                 <p className="text-ozx-muted text-sm mb-6">Em breve</p>
               )}
-              <ul className="space-y-2 mb-8">
-                {["Acesso aos 2 dias do evento", "Áreas premium e lounges", "Networking exclusivo", "Credencial digital com QR Code"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-ozx-muted">
+              <ul className="space-y-2 mb-8" data-testid={`ticket-benefits-${t.ticket_type_id}`}>
+                {(Array.isArray(t.benefits) && t.benefits.length > 0
+                  ? t.benefits
+                  : ["Acesso aos 2 dias do evento", "Áreas premium e lounges", "Networking exclusivo", "Credencial digital com QR Code"]
+                ).map((f, idx) => (
+                  <li key={`${f}-${idx}`} className="flex items-center gap-2 text-sm text-ozx-muted">
                     <Zap className={`w-3.5 h-3.5 ${isSoldOut ? "text-ozx-muted" : "text-ozx-primary"}`} /> {f}
                   </li>
                 ))}

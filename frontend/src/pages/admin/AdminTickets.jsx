@@ -6,10 +6,11 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Switch } from "../../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
-import { Plus, Trash2, Edit3 } from "lucide-react";
+import { Plus, Trash2, Edit3, X } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { name: "", description: "", is_active: true, coming_soon: false };
+const DEFAULT_BENEFITS = ["Acesso aos 2 dias do evento", "Áreas premium e lounges", "Networking exclusivo", "Credencial digital com QR Code"];
+const empty = { name: "", description: "", is_active: true, coming_soon: false, benefits: [...DEFAULT_BENEFITS] };
 
 export default function AdminTickets() {
   const [items, setItems] = useState([]);
@@ -28,7 +29,28 @@ export default function AdminTickets() {
     } catch (e) { toast.error("Erro"); }
   };
   const del = async (id) => { if (!confirm("Deletar tipo de ingresso?")) return; await api.delete(`/admin/tickets/${id}`); load(); };
-  const edit = (t) => { setForm({ name: t.name, description: t.description, is_active: t.is_active, coming_soon: !!t.coming_soon }); setEditing(t.ticket_type_id); setOpen(true); };
+  const edit = (t) => {
+    setForm({
+      name: t.name,
+      description: t.description,
+      is_active: t.is_active,
+      coming_soon: !!t.coming_soon,
+      benefits: Array.isArray(t.benefits) && t.benefits.length > 0 ? [...t.benefits] : [...DEFAULT_BENEFITS],
+    });
+    setEditing(t.ticket_type_id); setOpen(true);
+  };
+
+  const setBenefit = (idx, value) => {
+    const arr = [...(form.benefits || [])];
+    arr[idx] = value;
+    setForm({ ...form, benefits: arr });
+  };
+  const addBenefit = () => setForm({ ...form, benefits: [...(form.benefits || []), ""] });
+  const removeBenefit = (idx) => {
+    const arr = [...(form.benefits || [])];
+    arr.splice(idx, 1);
+    setForm({ ...form, benefits: arr });
+  };
 
   return (
     <div>
@@ -40,7 +62,7 @@ export default function AdminTickets() {
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty); } }}>
           <DialogTrigger asChild><Button className="bg-ozx-primary text-ozx-bg font-semibold rounded-full" data-testid="ticket-new"><Plus className="w-4 h-4 mr-2" /> Novo tipo</Button></DialogTrigger>
-          <DialogContent className="bg-ozx-bg2 border-white/10 text-white">
+          <DialogContent className="bg-ozx-bg2 border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} tipo</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label className="text-xs uppercase text-ozx-muted">Nome</Label>
@@ -54,6 +76,29 @@ export default function AdminTickets() {
                   <p className="text-xs text-ozx-muted">Mostra "Disponível em breve" no card em vez do botão de compra</p>
                 </div>
                 <Switch checked={!!form.coming_soon} onCheckedChange={(v) => setForm({ ...form, coming_soon: v })} data-testid="ticket-coming-soon" />
+              </div>
+              <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs uppercase text-ozx-muted">Lista de benefícios (aparece no card)</Label>
+                  <Button type="button" size="sm" variant="ghost" onClick={addBenefit} className="text-ozx-primary text-xs h-7" data-testid="ticket-add-benefit"><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
+                </div>
+                {(form.benefits || []).map((b, idx) => (
+                  <div key={idx} className="flex items-center gap-2" data-testid={`ticket-benefit-row-${idx}`}>
+                    <Input
+                      value={b}
+                      onChange={(e) => setBenefit(idx, e.target.value)}
+                      placeholder={`Benefício ${idx + 1}`}
+                      className="bg-white/5 border-white/10 text-white flex-1"
+                      data-testid={`ticket-benefit-input-${idx}`}
+                    />
+                    <Button type="button" size="sm" variant="ghost" onClick={() => removeBenefit(idx)} className="text-ozx-muted hover:text-ozx-danger h-9 px-2" data-testid={`ticket-benefit-remove-${idx}`}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {(form.benefits || []).length === 0 && (
+                  <p className="text-xs text-ozx-muted italic">Sem benefícios. Clique em "Adicionar" para incluir.</p>
+                )}
               </div>
               <Button onClick={submit} className="w-full bg-ozx-primary text-ozx-bg" data-testid="ticket-form-save">Salvar</Button>
             </div>

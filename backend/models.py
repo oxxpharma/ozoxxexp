@@ -142,7 +142,8 @@ class TicketTypeCreate(BaseModel):
     name: str
     description: Optional[str] = ""
     is_active: bool = True
-    coming_soon: bool = False  # Quando True, mostra "Disponível em breve" no lugar do CTA
+    coming_soon: bool = False
+    benefits: Optional[List[str]] = None  # Lista de benefícios mostrada no card
 
 
 class TicketTypeUpdate(BaseModel):
@@ -150,6 +151,7 @@ class TicketTypeUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     coming_soon: Optional[bool] = None
+    benefits: Optional[List[str]] = None
 
 
 # LOTS — pricing tiers within a ticket type
