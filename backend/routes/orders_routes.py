@@ -207,7 +207,41 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
         holder_email = payload.holder_email
         holder_cpf = payload.holder_cpf or ""
         holder_phone = payload.holder_phone or ""
-        user_id = None
+
+        # Guest checkout: cria a conta do participante na hora (com a senha que ele escolheu)
+        # Se a senha vier preenchida, criamos a conta. Se já existir um usuário com esse e-mail,
+        # exigimos login (não sobrescrevemos senha de conta existente — vector de takeover).
+        email_lower = holder_email.lower()
+        existing_user = await db.users.find_one({"email": email_lower})
+        if existing_user:
+            raise HTTPException(
+                status_code=400,
+                detail="Este e-mail já tem conta. Faça login para finalizar a compra ou use 'Esqueci minha senha'.",
+            )
+        if not payload.account_password or len(payload.account_password) < 6:
+            raise HTTPException(
+                status_code=400,
+                detail="Defina uma senha de pelo menos 6 caracteres para criar sua conta.",
+            )
+        from auth import hash_password as _hash
+        new_user = {
+            "user_id": gen_id("user"),
+            "name": holder_name,
+            "email": email_lower,
+            "password_hash": _hash(payload.account_password),
+            "cpf": holder_cpf,
+            "phone": holder_phone,
+            "birth_date": payload.holder_birth_date or "",
+            "gender": payload.holder_gender or "",
+            "city": payload.holder_city or "",
+            "state": payload.holder_state or "",
+            "role": "user",
+            "active": True,
+            "created_at": now_iso(),
+            "created_via": "checkout",
+        }
+        await db.users.insert_one(new_user)
+        user_id = new_user["user_id"]
 
     resolved = await _resolve_price(payload)
     ticket = resolved["ticket"]

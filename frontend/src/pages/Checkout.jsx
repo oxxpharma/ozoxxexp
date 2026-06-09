@@ -27,6 +27,8 @@ export default function Checkout() {
   const [hasCompanion, setHasCompanion] = useState(false);
   const [companion, setCompanion] = useState({ name: "", email: "", cpf: "", phone: "" });
   const [holder, setHolder] = useState({ holder_name: "", holder_email: "", holder_cpf: "", holder_phone: "", holder_birth_date: "", holder_gender: "", holder_city: "", holder_state: "" });
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [method, setMethod] = useState("pix");
   const [coupon, setCoupon] = useState("");
   const [couponValid, setCouponValid] = useState(null);
@@ -108,6 +110,11 @@ export default function Checkout() {
   const submit = async (e) => {
     e.preventDefault();
     if (!lot) return toast.error("Selecione um lote");
+    // Se NÃO está logado, exigir senha forte para a conta que será criada
+    if (!user) {
+      if (!password || password.length < 6) return toast.error("Defina uma senha de pelo menos 6 caracteres");
+      if (password !== passwordConfirm) return toast.error("As senhas não conferem");
+    }
     setLoading(true);
     try {
       const utm = getUTM();
@@ -116,6 +123,7 @@ export default function Checkout() {
         has_companion: hasCompanion, companion: hasCompanion ? companion : null,
         payment_method: method, coupon_code: couponValid ? couponValid.code : null,
         ...holder, utm: Object.keys(utm).length ? utm : null,
+        ...(user ? {} : { account_password: password }),
       };
       const { data } = await api.post("/orders", payload);
       toast.success("Pedido criado!");
@@ -197,6 +205,28 @@ export default function Checkout() {
                 <Field label="Cidade" value={holder.holder_city} on={(v) => setHolder({ ...holder, holder_city: v })} />
                 <Field label="Estado (UF)" value={holder.holder_state} on={(v) => setHolder({ ...holder, holder_state: v.toUpperCase().slice(0, 2) })} />
               </div>
+
+              {!user && (
+                <div className="mt-6 pt-6 border-t border-white/5" data-testid="checkout-password-section">
+                  <h3 className="font-display text-lg mb-1">Crie uma senha para sua conta</h3>
+                  <p className="text-sm text-ozx-muted mb-4">Com sua conta você pode acessar suas credenciais a qualquer momento em <span className="text-white">/login</span>.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="Senha" type="password" value={password} on={setPassword} placeholder="Mínimo 6 caracteres" required testId="checkout-password" />
+                    <Field label="Confirmar senha" type="password" value={passwordConfirm} on={setPasswordConfirm} placeholder="Repita a senha" required testId="checkout-password-confirm" />
+                  </div>
+                  {password && password.length < 6 && (
+                    <p className="text-xs text-ozx-danger mt-2">Senha muito curta — use pelo menos 6 caracteres.</p>
+                  )}
+                  {password && passwordConfirm && password !== passwordConfirm && (
+                    <p className="text-xs text-ozx-danger mt-2">As senhas não conferem.</p>
+                  )}
+                </div>
+              )}
+              {user && (
+                <div className="mt-6 pt-6 border-t border-white/5 text-sm text-ozx-muted" data-testid="checkout-logged-info">
+                  Você está logado como <span className="text-white">{user.email}</span>. Após o pagamento, suas credenciais aparecem no seu dashboard.
+                </div>
+              )}
             </div>
 
             <div className="glass-card rounded-3xl p-6 lg:p-8">
