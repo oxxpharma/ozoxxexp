@@ -23,7 +23,7 @@ export default function Navbar({ logoUrl, logoSize }) {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-2xl bg-ozx-bg/60 border-b border-white/5">
+    <header className="fixed left-0 right-0 z-50 backdrop-blur-2xl bg-ozx-bg/60 border-b border-white/5" style={{ top: "var(--notice-offset, 0px)" }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5" data-testid="nav-logo">
           {logoUrl ? (

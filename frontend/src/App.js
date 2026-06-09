@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Protected from "./components/Protected";
 import PageTracker from "./components/PageTracker";
+import SiteNotice from "./components/SiteNotice";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -50,6 +51,7 @@ function AppRouter() {
   return (
     <>
       <PageTracker />
+      <SiteNotice />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/l/:slug" element={<LeaderLanding />} />

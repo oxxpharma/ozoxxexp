@@ -116,6 +116,10 @@ class AppearanceConfig(BaseModel):
     about_card1_text: str = "Shows, palestras, painéis exclusivos, lounges premium e ativações de marca cuidadosamente curadas. Cada minuto pensado para você."
     about_card2_title: str = "Networking de alto nível"
     about_card2_text: str = "Conecte-se com fundadores, criadores e líderes de marca em ambientes pensados para conversas que importam."
+    # Faixa de aviso no topo do site (banner global)
+    notice_enabled: bool = False
+    notice_text: str = ""
+    notice_color: str = "yellow"  # yellow | red | blue | green
 
 
 class SpeakerCreate(BaseModel):
@@ -138,12 +142,14 @@ class TicketTypeCreate(BaseModel):
     name: str
     description: Optional[str] = ""
     is_active: bool = True
+    coming_soon: bool = False  # Quando True, mostra "Disponível em breve" no lugar do CTA
 
 
 class TicketTypeUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    coming_soon: Optional[bool] = None
 
 
 # LOTS — pricing tiers within a ticket type

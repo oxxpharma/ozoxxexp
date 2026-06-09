@@ -341,6 +341,7 @@ export default function Landing() {
             const ticketLots = lots.filter((l) => l.ticket_type_id === t.ticket_type_id).sort((a, b) => (a.order || 0) - (b.order || 0));
             const visibleLot = lot || ticketLots[0];
             const isSoldOut = visibleLot ? !visibleLot.is_available : true;
+            const isComingSoon = !!t.coming_soon;
             return (
             <motion.div
               key={t.ticket_type_id}
@@ -359,7 +360,12 @@ export default function Landing() {
               <Ticket className={`w-8 h-8 mb-6 ${isSoldOut ? "text-ozx-muted" : "text-ozx-primary"}`} />
               <h3 className="font-display text-3xl font-medium mb-2">{t.name}</h3>
               <p className="text-ozx-muted text-sm leading-relaxed mb-6">{t.description}</p>
-              {visibleLot ? (
+              {isComingSoon ? (
+                <div className="mb-4" data-testid="ticket-coming-soon-label">
+                  <p className="font-display text-3xl text-ozx-primary mb-1">Disponível em breve</p>
+                  <p className="text-sm text-ozx-muted">Aguarde — novidades em instantes</p>
+                </div>
+              ) : visibleLot ? (
                 <div className="mb-4">
                   {isSoldOut ? (
                     <div className="mb-2">
@@ -390,11 +396,11 @@ export default function Landing() {
               </ul>
               <Button
                 onClick={() => navigate(`/checkout?ticket=${t.ticket_type_id}`)}
-                disabled={isSoldOut}
-                className={`w-full font-semibold rounded-full py-6 ${isSoldOut ? "bg-white/10 text-ozx-muted cursor-not-allowed" : "bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg"}`}
+                disabled={isSoldOut || isComingSoon}
+                className={`w-full font-semibold rounded-full py-6 ${(isSoldOut || isComingSoon) ? "bg-white/10 text-ozx-muted cursor-not-allowed" : "bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg"}`}
                 data-testid={`ticket-buy-${t.ticket_type_id}`}
               >
-                {isSoldOut ? "Esgotado" : <>Comprar Agora <ArrowRight className="w-4 h-4 ml-2" /></>}
+                {isComingSoon ? "Em breve" : isSoldOut ? "Esgotado" : <>Comprar Agora <ArrowRight className="w-4 h-4 ml-2" /></>}
               </Button>
             </motion.div>
             );

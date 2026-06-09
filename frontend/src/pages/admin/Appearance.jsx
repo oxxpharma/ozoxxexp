@@ -6,7 +6,9 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { toast } from "sonner";
 import ImageUpload from "../../components/ImageUpload";
-import { Plus, X } from "lucide-react";
+import { Plus, X, AlertTriangle } from "lucide-react";
+import { Switch } from "../../components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../components/ui/select";
 
 export default function Appearance() {
   const [data, setData] = useState(null);
@@ -113,6 +115,42 @@ export default function Appearance() {
         <div>
           <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">FAQ (JSON: [&#123;q,a&#125;])</Label>
           <Textarea value={faq} onChange={(e) => setFaq(e.target.value)} rows={8} className="bg-white/5 border-white/10 text-white font-mono text-xs" />
+        </div>
+      </div>
+
+      <div className="glass-card rounded-3xl p-6 mb-6 border-yellow-500/20">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            <Label className="text-sm font-medium">Faixa de aviso (banner global)</Label>
+          </div>
+          <Switch checked={!!data.notice_enabled} onCheckedChange={(v) => set("notice_enabled", v)} data-testid="notice-enabled" />
+        </div>
+        <p className="text-xs text-ozx-muted mb-4">Quando ativo, aparece no topo de TODAS as páginas públicas do site. Use para avisos importantes (instabilidade, manutenção, último dia de promoção, etc).</p>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-4">
+          <div>
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Texto do aviso</Label>
+            <Textarea
+              value={data.notice_text || ""}
+              onChange={(e) => set("notice_text", e.target.value)}
+              rows={2}
+              placeholder="Ex: Estamos passando por instabilidade no servidor. Em breve retornaremos à normalidade."
+              className="bg-white/5 border-white/10 text-white"
+              data-testid="notice-text"
+            />
+          </div>
+          <div>
+            <Label className="text-xs uppercase text-ozx-muted mb-1.5 block">Cor</Label>
+            <Select value={data.notice_color || "yellow"} onValueChange={(v) => set("notice_color", v)}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="notice-color"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-ozx-bg2 text-white border-white/10">
+                <SelectItem value="yellow">Amarelo (aviso)</SelectItem>
+                <SelectItem value="red">Vermelho (urgente)</SelectItem>
+                <SelectItem value="blue">Azul (informativo)</SelectItem>
+                <SelectItem value="green">Verde (sucesso)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

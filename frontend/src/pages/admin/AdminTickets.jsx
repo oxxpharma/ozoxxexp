@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Trash2, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { name: "", description: "", is_active: true };
+const empty = { name: "", description: "", is_active: true, coming_soon: false };
 
 export default function AdminTickets() {
   const [items, setItems] = useState([]);
@@ -28,7 +28,7 @@ export default function AdminTickets() {
     } catch (e) { toast.error("Erro"); }
   };
   const del = async (id) => { if (!confirm("Deletar tipo de ingresso?")) return; await api.delete(`/admin/tickets/${id}`); load(); };
-  const edit = (t) => { setForm({ name: t.name, description: t.description, is_active: t.is_active }); setEditing(t.ticket_type_id); setOpen(true); };
+  const edit = (t) => { setForm({ name: t.name, description: t.description, is_active: t.is_active, coming_soon: !!t.coming_soon }); setEditing(t.ticket_type_id); setOpen(true); };
 
   return (
     <div>
@@ -48,6 +48,13 @@ export default function AdminTickets() {
               <div><Label className="text-xs uppercase text-ozx-muted">Descrição</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-white/5 border-white/10 text-white" /></div>
               <div className="flex items-center justify-between"><Label>Ativo</Label><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Disponível em breve</Label>
+                  <p className="text-xs text-ozx-muted">Mostra "Disponível em breve" no card em vez do botão de compra</p>
+                </div>
+                <Switch checked={!!form.coming_soon} onCheckedChange={(v) => setForm({ ...form, coming_soon: v })} data-testid="ticket-coming-soon" />
+              </div>
               <Button onClick={submit} className="w-full bg-ozx-primary text-ozx-bg" data-testid="ticket-form-save">Salvar</Button>
             </div>
           </DialogContent>
