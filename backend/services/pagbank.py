@@ -227,9 +227,9 @@ async def create_checkout(
             {"type": "CREDIT_CARD"},
             {"type": "PIX"},
         ],
-        "payment_methods_configs": [
-            {"type": "CREDIT_CARD", "config_options": [{"option": "INSTALLMENTS_LIMIT", "value": "12"}]},
-        ],
+        # Removido payment_methods_configs.INSTALLMENTS_LIMIT — a config de parcelamento
+        # (ex: 10x sem juros) é puxada automaticamente das configurações da conta PagBank
+        # no painel Vendas Online → Configurações → Parcelamento.
         "redirect_url": redirect_url,
         "notification_urls": [notification_url] if notification_url else [],
         "payment_notification_urls": [notification_url] if notification_url else [],
