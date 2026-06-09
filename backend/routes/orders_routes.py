@@ -483,7 +483,7 @@ async def retry_payment(order_id: str, request: Request):
 @router.post("/{order_id}/simulate-pay")
 async def simulate_payment(order_id: str):
     import os
-    if os.environ.get("ENABLE_DEV_SIMULATE_PAY", "true").lower() not in ("1", "true", "yes"):
+    if os.environ.get("ENABLE_DEV_SIMULATE_PAY", "false").lower() not in ("1", "true", "yes"):
         raise HTTPException(status_code=403, detail="Simulação desativada")
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:

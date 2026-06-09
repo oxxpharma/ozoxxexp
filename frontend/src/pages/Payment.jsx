@@ -154,12 +154,20 @@ export default function Payment() {
                 </div>
               )}
 
-              <div className="mt-6 pt-6 border-t border-white/5">
-                <p className="text-xs text-ozx-muted mb-2">Modo desenvolvedor</p>
-                <Button onClick={simulatePay} variant="ghost" size="sm" className="text-ozx-muted text-xs" data-testid="payment-simulate">
-                  Simular pagamento aprovado (dev)
-                </Button>
-              </div>
+              {/* Botão dev — só renderiza em ambientes locais/preview, NUNCA em produção */}
+              {(() => {
+                const h = typeof window !== "undefined" ? window.location.hostname : "";
+                const isDev = h === "localhost" || h === "127.0.0.1" || h.endsWith(".preview.emergentagent.com");
+                if (!isDev) return null;
+                return (
+                  <div className="mt-6 pt-6 border-t border-white/5">
+                    <p className="text-xs text-ozx-muted mb-2">Modo desenvolvedor</p>
+                    <Button onClick={simulatePay} variant="ghost" size="sm" className="text-ozx-muted text-xs" data-testid="payment-simulate">
+                      Simular pagamento aprovado (dev)
+                    </Button>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </motion.div>

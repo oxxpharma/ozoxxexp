@@ -14,8 +14,10 @@ async def get_pagbank_config():
     settings = await db.app_settings.find_one({"_id": "integrations"})
     if not settings:
         return None
+    token = settings.get("pagbank_token") or ""
+    # Strip whitespace/newlines — copia do painel PagBank às vezes vem com \n no final
     return {
-        "token": settings.get("pagbank_token"),
+        "token": token.strip(),
         "email": settings.get("pagbank_email"),
         "sandbox": settings.get("pagbank_sandbox", True),
     }
@@ -160,7 +162,19 @@ async def create_order(
                 "raw": data,
             }
         logger.error(f"PagBank create_order failed {r.status_code}: {r.text}")
-        return {"success": False, "error": f"PagBank: {r.status_code}", "raw": r.text[:600]}
+        msg = f"PagBank {r.status_code}"
+        try:
+            body = r.json()
+            errs = body.get("error_messages") or body.get("errors") or []
+            if errs:
+                first = errs[0]
+                desc = first.get("description") or first.get("message") or first.get("code")
+                param = first.get("parameter_name") or ""
+                if desc:
+                    msg = f"PagBank {r.status_code}: {desc}" + (f" ({param})" if param else "")
+        except Exception:
+            pass
+        return {"success": False, "error": msg, "raw": r.text[:1000]}
     except Exception as e:
         logger.exception("PagBank request failed")
         return {"success": False, "error": str(e)}
@@ -244,7 +258,20 @@ async def create_checkout(
                 "raw": data,
             }
         logger.error(f"PagBank create_checkout failed {r.status_code}: {r.text}")
-        return {"success": False, "error": f"PagBank: {r.status_code}", "raw": r.text[:600]}
+        # Extract human-readable message from PagBank error body if possible
+        msg = f"PagBank {r.status_code}"
+        try:
+            body = r.json()
+            errs = body.get("error_messages") or body.get("errors") or []
+            if errs:
+                first = errs[0]
+                desc = first.get("description") or first.get("message") or first.get("code")
+                param = first.get("parameter_name") or ""
+                if desc:
+                    msg = f"PagBank {r.status_code}: {desc}" + (f" ({param})" if param else "")
+        except Exception:
+            pass
+        return {"success": False, "error": msg, "raw": r.text[:1000]}
     except Exception as e:
         logger.exception("PagBank checkout request failed")
         return {"success": False, "error": str(e)}

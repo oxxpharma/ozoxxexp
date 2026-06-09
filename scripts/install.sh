@@ -262,6 +262,10 @@ ok "ozoxx-backend.service"
 # ---------- NGINX: SITE ------------------------------------------------------
 if [ "$INSTALL_NGINX" = "yes" ]; then
     SERVER_NAME="${DOMAIN:-_}"
+    # Se DOMAIN foi informado, também aceita o subdomínio www
+    if [ -n "$DOMAIN" ]; then
+        SERVER_NAME="${DOMAIN} www.${DOMAIN}"
+    fi
     log "Configurando nginx para $SERVER_NAME..."
     cat > /etc/nginx/sites-available/ozoxx <<EOF
 server {
@@ -280,7 +284,9 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 90s;
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 120s;
     }
 
     # Hashed assets — cache longo
