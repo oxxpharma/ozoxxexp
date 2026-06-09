@@ -38,6 +38,41 @@ export default function Landing() {
   const { event, appearance, tickets, lots = [], current_lots = {}, speakers = [] } = config;
   const ticketWithLot = (t) => current_lots[t.ticket_type_id] || lots.find((l) => l.ticket_type_id === t.ticket_type_id && l.is_active);
 
+  // Formata o intervalo de datas do evento no card "Data"
+  // Ex: start_date="2026-10-08T09:00:00-03:00", end_date="2026-10-09T22:00:00-03:00"
+  // Linha 1: "08 e 09 Outubro" (ou "08 Out e 02 Nov" se cair em meses diferentes)
+  // Linha 2: "2026 · 09h às 22h"
+  const formatEventDateLabel = () => {
+    try {
+      const start = new Date(event.start_date);
+      const end = new Date(event.end_date);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return { line1: "Em breve", line2: "" };
+      }
+      const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      const monthsShort = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const dd = (d) => String(d.getDate()).padStart(2, "0");
+      const hh = (d) => String(d.getHours()).padStart(2, "0");
+      const sameDay = start.toDateString() === end.toDateString();
+      const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+      let line1;
+      if (sameDay) {
+        line1 = `${dd(start)} ${months[start.getMonth()]}`;
+      } else if (sameMonth) {
+        line1 = `${dd(start)} e ${dd(end)} ${months[start.getMonth()]}`;
+      } else {
+        line1 = `${dd(start)} ${monthsShort[start.getMonth()]} a ${dd(end)} ${monthsShort[end.getMonth()]}`;
+      }
+      const startH = hh(start);
+      const endH = hh(end);
+      const line2 = `${start.getFullYear()} · ${startH}h às ${endH}h`;
+      return { line1, line2 };
+    } catch (e) {
+      return { line1: event.short_pitch || "Em breve", line2: "" };
+    }
+  };
+  const dateLabel = formatEventDateLabel();
+
   return (
     <div className="min-h-screen bg-ozx-bg text-white relative overflow-x-hidden">
       <Navbar logoUrl={appearance.logo_url} logoSize={appearance.logo_size} />
@@ -210,8 +245,8 @@ export default function Landing() {
           <motion.div {...fadeUp} transition={{ duration: 0.8, delay: 0.1 }} className="md:col-span-5 glass-card rounded-3xl p-8 lg:p-10">
             <Calendar className="w-8 h-8 text-ozx-primary mb-6" />
             <h3 className="font-display text-2xl font-medium mb-3">Data</h3>
-            <p className="text-2xl font-display text-white">08 e 09 Outubro</p>
-            <p className="text-ozx-muted text-sm mt-1">2025 · 09h às 22h</p>
+            <p className="text-2xl font-display text-white" data-testid="event-date-line1">{dateLabel.line1}</p>
+            {dateLabel.line2 && <p className="text-ozx-muted text-sm mt-1" data-testid="event-date-line2">{dateLabel.line2}</p>}
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ duration: 0.8, delay: 0.15 }} className="md:col-span-5 glass-card rounded-3xl p-8 lg:p-10">
