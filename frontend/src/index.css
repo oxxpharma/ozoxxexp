@@ -5,6 +5,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide "Made with Emergent" badge in production builds */
+#emergent-badge,
+a[href*="emergent.sh"],
+a[href*="app.emergent"],
+[data-testid="made-with-emergent"],
+div[class*="emergent-badge"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 :root {
   --bg: #070b1e;
   --bg-2: #0e1430;

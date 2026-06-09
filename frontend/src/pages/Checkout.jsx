@@ -165,7 +165,6 @@ export default function Checkout() {
                     ) : (
                       <>
                         <p className="font-display text-2xl">R$ {Number(l.price).toFixed(2).replace(".", ",")}</p>
-                        <p className="text-xs text-ozx-muted mt-1">{l.progress_pct}% vendidos</p>
                       </>
                     )}
                   </label>
