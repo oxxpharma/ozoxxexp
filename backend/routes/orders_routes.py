@@ -538,24 +538,6 @@ async def retry_payment(order_id: str, request: Request):
     return await db.orders.find_one({"order_id": order_id}, {"_id": 0})
 
 
-@router.post("/{order_id}/simulate-pay")
-async def simulate_payment(order_id: str):
-    import os
-    if os.environ.get("ENABLE_DEV_SIMULATE_PAY", "false").lower() not in ("1", "true", "yes"):
-        raise HTTPException(status_code=403, detail="Simulação desativada")
-    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
-    if not order:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado")
-    if order["status"] == "PAID":
-        return {"ok": True, "already_paid": True}
-    await db.orders.update_one({"order_id": order_id}, {"$set": {"status": "PAID", "updated_at": now_iso(), "paid_at": now_iso()}})
-    order["status"] = "PAID"
-    if not order.get("credentials_generated"):
-        await _create_credentials_for_order(order)
-        await db.orders.update_one({"order_id": order_id}, {"$set": {"credentials_generated": True}})
-    return {"ok": True}
-
-
 @router.get("/{order_id}/refresh-status")
 async def refresh_status(order_id: str):
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})

@@ -67,22 +67,8 @@ export default function Integrations() {
             <Switch checked={data.pagbank_sandbox} onCheckedChange={(v) => setData({ ...data, pagbank_sandbox: v })} data-testid="pagbank-sandbox" />
           </div>
 
-          <div className="border-t border-white/5 pt-4 space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-ozx-primary/5 border border-ozx-primary/20">
-              <div className="flex-1 mr-3">
-                <p className="text-sm">Usar API V2 (legacy — sem homologação)</p>
-                <p className="text-xs text-ozx-muted">Pula a homologação da API v4. Cliente vai para a página clássica de pagamento do PagBank. Suporta cartão, boleto, PIX e saldo conforme habilitado na sua conta.</p>
-              </div>
-              <Switch checked={!!data.pagbank_use_v2} onCheckedChange={(v) => setData({ ...data, pagbank_use_v2: v })} data-testid="pagbank-use-v2" />
-            </div>
-            {data.pagbank_use_v2 && (
-              <div>
-                <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Token V2 (opcional, deixe vazio para usar o token acima)</Label>
-                <Input type="password" value={data.pagbank_v2_token || ""} onChange={set("pagbank_v2_token")} className="bg-white/5 border-white/10 text-white font-mono" placeholder="Cole aqui SE seu token V2 for diferente do token API v4" data-testid="pagbank-v2-token" />
-                <p className="text-xs text-ozx-muted mt-1">PagBank → Vendas Online → Integrações → Pagamento Padrão (V2)</p>
-              </div>
-            )}
-          </div>
+          {/* V2 toggle removido — sua conta PagBank não tem o produto V2 habilitado.
+              Vamos seguir com a homologação da API v4. */}
           <div className="flex gap-3">
             <Button onClick={save} className="bg-ozx-primary text-ozx-bg font-semibold rounded-full" data-testid="pagbank-save">Salvar</Button>
             <Button onClick={testPagBank} variant="outline" className="border-white/15 text-white rounded-full" data-testid="pagbank-test">
