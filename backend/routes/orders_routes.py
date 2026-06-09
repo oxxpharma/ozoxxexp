@@ -474,6 +474,30 @@ async def retry_payment(order_id: str, request: Request):
     new_ref = f"{order_id}-retry-{int(time.time())}"
     payment_method = order.get("payment_method", "pix")
 
+    # V2 legacy path (single hosted checkout, no homologation needed)
+    pb_cfg = await pb_get_config()
+    use_v2 = bool(pb_cfg and pb_cfg.get("use_v2"))
+    if use_v2:
+        origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
+        redirect_url = f"{origin}/payment/{order_id}"
+        pb = await pb_create_v2(
+            reference_id=new_ref,
+            customer_name=order["holder_name"], customer_email=order["holder_email"],
+            customer_cpf=order.get("holder_cpf", ""), customer_phone=order.get("holder_phone", ""),
+            amount_cents=amount_cents,
+            description=f"{order['ticket_type_name']} ({order['quantity']}x)",
+            redirect_url=redirect_url, notification_url=notif_url,
+        )
+        if not pb.get("success"):
+            raise HTTPException(status_code=502, detail=f"Falha PagBank: {pb.get('error')}")
+        await db.orders.update_one({"order_id": order_id}, {"$set": {
+            "pagbank_checkout_id": pb.get("checkout_id"),
+            "pagbank_payment_link": pb.get("payment_link"),
+            "pagbank_v2": True,
+            "status": "WAITING", "updated_at": now_iso(),
+        }, "$unset": {"payment_error": ""}})
+        return await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+
     if payment_method == "credit_card":
         origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
         redirect_url = f"{origin}/payment/{order_id}"

@@ -154,10 +154,10 @@ export default function Payment() {
                 </div>
               )}
 
-              {/* Botão dev — só renderiza em ambientes locais/preview, NUNCA em produção */}
+              {/* Botão dev — só renderiza em hostnames de desenvolvimento. NUNCA em produção. */}
               {(() => {
                 const h = typeof window !== "undefined" ? window.location.hostname : "";
-                const isDev = h === "localhost" || h === "127.0.0.1" || h.endsWith(".preview.emergentagent.com");
+                const isDev = h === "localhost" || h === "127.0.0.1" || h.endsWith(".preview.emergentagent.com") || h.endsWith(".emergent.host");
                 if (!isDev) return null;
                 return (
                   <div className="mt-6 pt-6 border-t border-white/5">
