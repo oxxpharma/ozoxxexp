@@ -24,6 +24,7 @@ export default function AdminUsers() {
   const [reactOpen, setReactOpen] = useState(false);
   const [reactivation, setReactivation] = useState({ loading: false, running: false, data: null, result: null });
   const [sendEmails, setSendEmails] = useState(true);
+  const [perRowLoading, setPerRowLoading] = useState({}); // { email: bool }
 
   const load = async () => { const { data } = await api.get("/admin/users"); setUsers(data); };
   useEffect(() => { load(); }, []);
@@ -53,6 +54,26 @@ export default function AdminUsers() {
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao executar");
       setReactivation((s) => ({ ...s, running: false }));
+    }
+  };
+
+  const reactivateSingle = async (email) => {
+    if (!confirm(`Reativar a conta de ${email}? ${sendEmails ? "Um e-mail com link de definir senha será enviado." : "Nenhum e-mail será enviado."}`)) return;
+    setPerRowLoading((s) => ({ ...s, [email]: true }));
+    try {
+      const { data } = await api.post("/admin/users-actions/reactivate", { only_emails: [email], send_emails: sendEmails, dry_run: false });
+      if (data.created + data.password_pending === 0 && data.skipped_already_active > 0) {
+        toast.info(`${email} já estava ativo (apenas pedidos vinculados: ${data.linked_orders})`);
+      } else {
+        toast.success(`Conta reativada · e-mail ${data.emails_sent ? "enviado" : "não enviado"}`);
+      }
+      const refresh = await api.get("/admin/users-actions/orphan-buyers");
+      setReactivation((s) => ({ ...s, data: refresh.data }));
+      await load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao reativar");
+    } finally {
+      setPerRowLoading((s) => { const n = { ...s }; delete n[email]; return n; });
     }
   };
 
@@ -245,17 +266,29 @@ export default function AdminUsers() {
             {previewData && !previewLoading && previewData.items?.length > 0 && (
               <div className="max-h-64 overflow-y-auto border border-white/10 rounded-2xl divide-y divide-white/5">
                 {previewData.items.slice(0, 50).map((it) => (
-                  <div key={it.email} className="flex items-center justify-between p-2 px-3 text-xs">
+                  <div key={it.email} className="flex items-center justify-between gap-2 p-2 px-3 text-xs">
                     <div className="min-w-0 flex-1">
                       <p className="text-white truncate">{it.name || it.email}</p>
                       <p className="text-ozx-muted truncate">{it.email} · {it.orders_count} pedido(s)</p>
                     </div>
-                    <span className={`shrink-0 ml-2 px-2 py-0.5 rounded-full uppercase tracking-wider text-[10px] ${
+                    <span className={`shrink-0 px-2 py-0.5 rounded-full uppercase tracking-wider text-[10px] ${
                       it.status === "ok" ? "bg-ozx-success/10 text-ozx-success border border-ozx-success/30" :
                       it.status === "needs_account" ? "bg-ozx-primary/10 text-ozx-primary border border-ozx-primary/30" :
                       it.status === "needs_password" ? "bg-ozx-warning/10 text-ozx-warning border border-ozx-warning/30" :
                       "bg-white/5 text-ozx-muted border border-white/10"
                     }`}>{it.status.replace("_", " ")}</span>
+                    {it.status !== "ok" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 h-7 px-2 border-ozx-primary/40 text-ozx-primary text-[10px]"
+                        disabled={!!perRowLoading[it.email] || reactRunning}
+                        onClick={() => reactivateSingle(it.email)}
+                        data-testid={`react-single-${it.email}`}
+                      >
+                        {perRowLoading[it.email] ? <Loader2 className="w-3 h-3 animate-spin" /> : "Reativar"}
+                      </Button>
+                    )}
                   </div>
                 ))}
                 {previewData.items.length > 50 && (
