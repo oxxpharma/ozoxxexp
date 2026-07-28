@@ -44,6 +44,11 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 10/06/2026 (v2) — Preço dinâmico por método de pagamento
+- Backend (`orders_routes.py::_resolve_price`): agora escolhe `unit_price` conforme `payload.payment_method`. `pix` usa `lot.cash_price` (se > 0), qualquer outro método (`credit_card`) usa `lot.price` (valor total parcelado). Fallback para `lot.price` se `cash_price` vazio.
+- Frontend `Checkout.jsx`: resumo do pedido recalcula ao trocar método. Rótulos dos rádios agora mostram os valores ("PIX à vista R$ 1.200,00" e "Cartão até 10x R$ 130,00 sem juros").
+- Testado via curl: PIX → total 1200, credit_card → total 1300 no mesmo lote.
+
 ## Iteração 10/06/2026 — Preço parcelado/à vista + cidade da hero configurável
 - **Lotes**: novos campos opcionais `installments_count`, `installment_price`, `cash_price` em `LotCreate/LotUpdate` (models.py) — display-only, não afetam checkout
 - **Admin `/admin/lots`**: seção "Exibição de preço no card (opcional)" com 3 inputs

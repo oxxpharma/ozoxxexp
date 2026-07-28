@@ -148,7 +148,12 @@ async def _check_leader_goal(leader_id: str):
 
 
 async def _resolve_price(payload: OrderCreate) -> dict:
-    """Returns dict with lot, unit_price, ticket_type."""
+    """Returns dict with lot, unit_price, ticket_type.
+
+    unit_price varies with payment_method when the lot has `cash_price`:
+    - pix / à vista → cash_price (fallback: price)
+    - credit_card (parcelamento) → price (o valor total parcelado)
+    """
     ticket = await db.ticket_types.find_one({"ticket_type_id": payload.ticket_type_id, "is_active": True}, {"_id": 0})
     if not ticket:
         raise HTTPException(status_code=404, detail="Ingresso não encontrado")
@@ -171,19 +176,26 @@ async def _resolve_price(payload: OrderCreate) -> dict:
         qty = 2 if payload.has_companion else 1
         if sold + qty > lot["quantity"]:
             raise HTTPException(status_code=400, detail="Lote esgotado")
-        unit_price = lot["price"]
     else:
         # fallback: pick first available lot (active + not expired + not sold out)
         from routes.public_routes import _get_active_lots
         active = await _get_active_lots()
         candidates = [l for l in active if l["ticket_type_id"] == ticket["ticket_type_id"] and l["is_available"]]
         lot = candidates[0] if candidates else None
-        if lot:
-            unit_price = lot["price"]
-        else:
+        if not lot:
             raise HTTPException(status_code=400, detail="Nenhum lote disponível para este ingresso")
 
+    unit_price = _pick_unit_price(lot, payload.payment_method)
     return {"ticket": ticket, "lot": lot, "unit_price": unit_price}
+
+
+def _pick_unit_price(lot: dict, payment_method: str | None) -> float:
+    """Choose between cash_price and price based on payment method."""
+    cash = lot.get("cash_price")
+    price = lot.get("price")
+    if payment_method == "pix" and cash and float(cash) > 0:
+        return float(cash)
+    return float(price)
 
 
 @router.post("")

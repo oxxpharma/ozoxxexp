@@ -63,7 +63,14 @@ export default function Checkout() {
   const ticket = tickets.find((t) => t.ticket_type_id === selectedTicket);
   const lot = lots.find((l) => l.lot_id === selectedLot);
   const qty = hasCompanion ? 2 : 1;
-  const subtotal = lot ? Number(lot.price) * qty : 0;
+  const pickUnitPrice = (l, m) => {
+    if (!l) return 0;
+    const cash = Number(l.cash_price || 0);
+    if (m === "pix" && cash > 0) return cash;
+    return Number(l.price || 0);
+  };
+  const unitPrice = pickUnitPrice(lot, method);
+  const subtotal = unitPrice * qty;
   let discount = 0;
   if (couponValid) {
     if (couponValid.discount_type === "percent") discount = subtotal * (couponValid.discount_value / 100);
@@ -263,10 +270,26 @@ export default function Checkout() {
               <h2 className="font-display text-2xl mb-4">5. Pagamento</h2>
               <RadioGroup value={method} onValueChange={setMethod} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer ${method === "pix" ? "border-ozx-primary bg-ozx-primary/5" : "border-white/10"}`}>
-                  <RadioGroupItem value="pix" /><div><p className="font-display">PIX</p><p className="text-xs text-ozx-muted">Aprovação imediata</p></div>
+                  <RadioGroupItem value="pix" />
+                  <div>
+                    <p className="font-display">PIX <span className="text-xs text-ozx-success">à vista</span></p>
+                    {lot && Number(lot.cash_price) > 0 ? (
+                      <p className="text-xs text-ozx-muted">R$ {Number(lot.cash_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · aprovação imediata</p>
+                    ) : (
+                      <p className="text-xs text-ozx-muted">Aprovação imediata</p>
+                    )}
+                  </div>
                 </label>
                 <label className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer ${method === "credit_card" ? "border-ozx-primary bg-ozx-primary/5" : "border-white/10"}`}>
-                  <RadioGroupItem value="credit_card" /><div><p className="font-display">Cartão</p><p className="text-xs text-ozx-muted">Via PagBank</p></div>
+                  <RadioGroupItem value="credit_card" />
+                  <div>
+                    <p className="font-display">Cartão</p>
+                    {lot && Number(lot.installment_price) > 0 && lot.installments_count > 0 ? (
+                      <p className="text-xs text-ozx-muted">até {lot.installments_count}x R$ {Number(lot.installment_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} sem juros</p>
+                    ) : (
+                      <p className="text-xs text-ozx-muted">Via PagBank</p>
+                    )}
+                  </div>
                 </label>
               </RadioGroup>
             </div>
@@ -278,8 +301,8 @@ export default function Checkout() {
               <h3 className="font-display text-2xl mb-6">Seu pedido</h3>
               {lot && (
                 <div className="space-y-3">
-                  <div className="flex justify-between"><span className="text-ozx-muted text-sm">{ticket?.name} ({lot.name})</span><span>R$ {Number(lot.price).toFixed(2).replace(".", ",")}</span></div>
-                  {hasCompanion && <div className="flex justify-between"><span className="text-ozx-muted text-sm">+ Acompanhante</span><span>R$ {Number(lot.price).toFixed(2).replace(".", ",")}</span></div>}
+                  <div className="flex justify-between"><span className="text-ozx-muted text-sm">{ticket?.name} ({lot.name})</span><span data-testid="checkout-unit-price">R$ {Number(unitPrice).toFixed(2).replace(".", ",")}</span></div>
+                  {hasCompanion && <div className="flex justify-between"><span className="text-ozx-muted text-sm">+ Acompanhante</span><span>R$ {Number(unitPrice).toFixed(2).replace(".", ",")}</span></div>}
                   {couponValid && (
                     <div className="flex justify-between text-ozx-success" data-testid="checkout-coupon-line">
                       <span className="text-sm">Cupom {couponValid.code}</span>
