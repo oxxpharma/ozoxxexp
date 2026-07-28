@@ -44,6 +44,16 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 12/06/2026 — Cupons restritos a usuários específicos
+- **Modelo**: `CouponCreate/CouponUpdate` ganharam `allowed_user_ids: Optional[List[str]]`. Vazio = qualquer pessoa; preenchido = só quem tiver o e-mail entre os users selecionados.
+- **`GET /api/admin/coupons`**: enriquece cada cupom com `allowed_users` (array com user_id/name/email).
+- **`GET /api/coupons/validate/{code}?email=...`**: enforce da restrição — sem email → 400 "exclusivo"; email não permitido → 403; permitido → 200.
+- **`POST /api/orders`**: enforce server-side no `create_order` — bloqueia aplicação do cupom se `holder_email` não pertencer ao whitelist (403). Roda ANTES de criar conta guest.
+- **AdminCoupons.jsx**: nova seção no formulário "Restringir a usuários específicos" com busca + lista clicável + chips dos selecionados. Row do cupom mostra badge "Restrito a N usuário(s)" com preview de e-mails.
+- **Checkout.jsx::validateCoupon**: agora envia `?email=<holder_email>` na chamada de validação.
+- **Segurança**: match de e-mail via string exata lowercase (não regex). Testing agent flagou risco ReDoS/bypass no regex original — hardened em ambos endpoints.
+- **Testado**: 9/9 pytest + frontend UI 100% (iteration_6.json).
+
 ## Iteração 11/06/2026 — Painel do Líder completo + métricas de ingressos no admin
 - **`GET /api/me/leader`**: resposta agora inclui `buyers` (lista de pedidos com order_id/holder_name/holder_email/quantity/status/created_at/ticket_type_name/lot_name/payment_method) e `courtesy` (`{order, credential}` quando a meta foi batida e a credencial de cortesia foi gerada).
 - **LeaderDashboard.jsx**: nova seção "Quem comprou pelo seu link" com tabela filtável (empty state incluído) + card "Ingresso conquistado" quando `goal_reached && courtesy_credential_issued`, com botão "Ver minha credencial" que leva pra `/dashboard?highlight={credential_code}`.

@@ -273,9 +273,9 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
             # Enforce user restriction: if coupon has allowed_user_ids, buyer's email must match one of those users
             allowed_user_ids = coupon.get("allowed_user_ids") or []
             if allowed_user_ids:
-                buyer_email = (payload.holder_email or "").strip()
+                buyer_email = (payload.holder_email or "").strip().lower()
                 allowed_user = await db.users.find_one(
-                    {"user_id": {"$in": allowed_user_ids}, "email": {"$regex": f"^{buyer_email}$", "$options": "i"}},
+                    {"user_id": {"$in": allowed_user_ids}, "email": buyer_email},
                     {"_id": 0, "user_id": 1},
                 )
                 if not allowed_user:

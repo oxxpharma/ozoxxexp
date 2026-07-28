@@ -82,7 +82,7 @@ async def validate_coupon(code: str, email: str | None = Query(None)):
         if not email:
             raise HTTPException(status_code=400, detail="Este cupom é exclusivo. Informe o e-mail do titular para validar.")
         allowed_user = await db.users.find_one(
-            {"user_id": {"$in": allowed_user_ids}, "email": {"$regex": f"^{email.strip()}$", "$options": "i"}},
+            {"user_id": {"$in": allowed_user_ids}, "email": email.strip().lower()},
             {"_id": 0, "user_id": 1},
         )
         if not allowed_user:
