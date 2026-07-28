@@ -44,6 +44,12 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 12/06/2026 (v2) — Limite de usos por usuário nos cupons
+- Novo campo `max_uses_per_user: Optional[int]` em `CouponCreate/CouponUpdate` (independente de `max_uses` total e de `allowed_user_ids`).
+- **`validate` + `create_order`**: contam quantos pedidos com aquele `coupon_code` + `holder_email` (nos status PAID/COURTESY/WAITING/IN_ANALYSIS) o e-mail já teve; se >= limite → 400 "Você já usou este cupom Nx (limite: N)".
+- **AdminCoupons.jsx**: novo input "Usos por usuário" ao lado do total. Row do cupom exibe "· Nx por usuário" quando setado.
+- **Testado**: 7/7 novos + 9/9 anteriores (total 16/16) via testing agent (iteration_7.json). Novo arquivo `test_coupon_per_user_limit.py`. Isolamento por e-mail confirmado; coexistência com `max_uses`/`allowed_user_ids` ok.
+
 ## Iteração 12/06/2026 — Cupons restritos a usuários específicos
 - **Modelo**: `CouponCreate/CouponUpdate` ganharam `allowed_user_ids: Optional[List[str]]`. Vazio = qualquer pessoa; preenchido = só quem tiver o e-mail entre os users selecionados.
 - **`GET /api/admin/coupons`**: enriquece cada cupom com `allowed_users` (array com user_id/name/email).
