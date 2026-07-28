@@ -59,7 +59,7 @@ export default function AdminOrders() {
 
   const changeStatus = async (newStatus) => {
     if (!selected) return;
-    await api.put(`/api/admin/orders-actions/${selected.order_id}/status`, { status: newStatus });
+    await api.put(`/admin/orders-actions/${selected.order_id}/status`, { status: newStatus });
     toast.success("Status atualizado");
     await openOrder(selected.order_id);
     load();
@@ -68,7 +68,7 @@ export default function AdminOrders() {
   const resendEmail = async () => {
     if (!selected) return;
     try {
-      const { data } = await api.post(`/api/admin/orders-actions/${selected.order_id}/resend-email`);
+      const { data } = await api.post(`/admin/orders-actions/${selected.order_id}/resend-email`);
       toast.success(`E-mail reenviado para ${data.sent}/${data.total} credenciais`);
     } catch (e) { toast.error(e.response?.data?.detail || "Erro"); }
   };
@@ -84,7 +84,7 @@ export default function AdminOrders() {
     if (!body.has_companion) body.companion = null;
     if (!body.lot_id) delete body.lot_id;
     try {
-      await api.post("/api/admin/orders-actions/manual-courtesy", body);
+      await api.post("/admin/orders-actions/manual-courtesy", body);
       toast.success("Cortesia gerada!");
       setCourtesyOpen(false);
       setCourtesyForm({ holder_name: "", holder_email: "", holder_cpf: "", holder_phone: "", ticket_type_id: "", lot_id: "", has_companion: false, companion: { name: "", email: "", cpf: "", phone: "" }, notes: "" });

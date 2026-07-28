@@ -1,0 +1,25 @@
+{
+  "summary": "Retest of AdminOrders admin actions after main agent fixed the pre-existing double-/api bugs (changeStatus, resendEmail, createCourtesy). Executed a full end-to-end UI flow against production URL as admin: created a COURTESY order via 'Gerar cortesia', verified it appears in the list, opened its detail modal, changed status via order-status-select (toast 'Status atualizado'), clicked 'Reenviar e-mail' (toast with credencial count), then deleted the order via the modal 'Excluir pedido' button (toast 'Pedido excluído · 1 credencial(is) removida(s)') and confirmed it disappears from the filtered list. All 4 flows PASS 7/7 assertions. Delete regression also confirmed (modal delete testid=order-delete).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AdminOrders — courtesy dialog & order detail dialog", "issues": ["Console warning: shadcn DialogContent missing `Description` or `aria-describedby`. Cosmetic accessibility warning, non-blocking."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_4.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All 4 handlers in AdminOrders.jsx now use paths without leading /api — consistent with axios baseURL. Verified in code (lines 62, 71, 87, 100).",
+    "Minor a11y warning on DialogContent (missing aria-describedby) shows in console for both the courtesy dialog and the order detail dialog. Not user-facing."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only retest)", "frontend": "100% (7/7 assertions)"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 — works",
+  "seed_data_creation": "Created 1 courtesy order (TEST_courtesy_*) and deleted it in the same run. Net orders count unchanged.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "AdminOrders.jsx is now fully green: change status, resend email, manual courtesy, and delete (row + modal) all working end-to-end. Only remaining polish is the a11y warning on shadcn DialogContent (add DialogDescription / aria-describedby).",
+  "rca of the issue": "Previously all 4 mutating axios calls in AdminOrders.jsx had a duplicated /api prefix (baseURL already includes /api → resulted in /api/api/... 404). Main agent removed the leading /api from changeStatus (PUT /admin/orders-actions/{id}/status), resendEmail (POST /admin/orders-actions/{id}/resend-email), createCourtesy (POST /admin/orders-actions/manual-courtesy). Delete was already fixed in iteration 3. This retest confirms all 4 endpoints are reachable and produce the expected UI toasts."
+}
