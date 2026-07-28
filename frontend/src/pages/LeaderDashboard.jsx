@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import api from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { motion } from "framer-motion";
-import { Award, Target, TrendingUp, Copy, Share2, Trophy, Sparkles, ArrowRight } from "lucide-react";
+import { Award, Target, TrendingUp, Copy, Share2, Trophy, Sparkles, ArrowRight, Ticket, Users } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { toast } from "sonner";
+import { statusLabel } from "../lib/labels";
 
 export default function LeaderDashboard() {
   const { user } = useAuth();
@@ -14,7 +15,7 @@ export default function LeaderDashboard() {
   const [data, setData] = useState(null);
 
   const load = async () => {
-    try { const { data } = await api.get("/api/me/leader"); setData(data); }
+    try { const { data } = await api.get("/me/leader"); setData(data); }
     catch (e) { if (e.response?.status === 404) navigate("/dashboard"); }
   };
   useEffect(() => { load(); }, []); // eslint-disable-line
@@ -99,6 +100,89 @@ export default function LeaderDashboard() {
           <p className="text-xs text-ozx-muted mt-3">Divulgue nas redes, grupos e contatos. Toda compra através deste link conta para a sua meta.</p>
         </div>
 
+        {/* Courtesy credential unlocked */}
+        {data.goal_reached && data.courtesy?.credential && (
+          <div className="glass-strong rounded-3xl p-6 lg:p-8 mb-6 relative overflow-hidden border border-ozx-success/30" data-testid="leader-courtesy-card">
+            <div className="absolute -right-24 -top-24 h-72 w-72 bg-ozx-success/20 blur-3xl rounded-full" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-5 h-5 text-ozx-success" />
+                <p className="text-xs uppercase tracking-[0.25em] text-ozx-success">Ingresso conquistado</p>
+              </div>
+              <h3 className="font-display text-2xl mb-2">Sua credencial oficial está pronta</h3>
+              <p className="text-ozx-muted mb-4">Bateu a meta! O ingresso {data.courtesy.order?.ticket_type_name} foi gerado no seu nome — código <span className="font-mono text-white">{data.courtesy.credential.credential_code}</span>.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => navigate(`/dashboard?highlight=${data.courtesy.credential.credential_code}`)}
+                  className="bg-ozx-success text-ozx-bg font-semibold rounded-full"
+                  data-testid="leader-view-credential"
+                >
+                  <Ticket className="w-4 h-4 mr-2" /> Ver minha credencial
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Buyers list */}
+        <div className="glass-card rounded-3xl p-6 lg:p-8 mb-6" data-testid="leader-buyers-card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-ozx-primary" />
+              <h3 className="font-display text-xl">Quem comprou pelo seu link</h3>
+            </div>
+            <p className="text-xs text-ozx-muted">{data.buyers?.length || 0} pedido{(data.buyers?.length || 0) !== 1 ? "s" : ""}</p>
+          </div>
+          {!data.buyers || data.buyers.length === 0 ? (
+            <div className="text-center py-8 text-ozx-muted text-sm">
+              Ainda ninguém comprou pelo seu link. Compartilhe acima e comece a vender!
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-sm">
+                <thead className="text-ozx-muted text-[10px] uppercase tracking-wider">
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-2 py-2">Pedido</th>
+                    <th className="text-left px-2 py-2">Cliente</th>
+                    <th className="text-left px-2 py-2">Ingressos</th>
+                    <th className="text-left px-2 py-2">Status</th>
+                    <th className="text-right px-2 py-2">Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.buyers.map((o) => (
+                    <tr key={o.order_id} className="border-b border-white/5" data-testid={`leader-buyer-${o.order_id}`}>
+                      <td className="px-2 py-3 font-mono text-xs text-ozx-muted">{o.order_id.slice(-8)}</td>
+                      <td className="px-2 py-3">
+                        <p>{o.holder_name}</p>
+                        <p className="text-[10px] text-ozx-muted">{o.holder_email}</p>
+                      </td>
+                      <td className="px-2 py-3">
+                        <p className="font-display text-lg leading-none">{o.quantity}x</p>
+                        <p className="text-[10px] text-ozx-muted">{o.ticket_type_name}{o.lot_name && ` · ${o.lot_name}`}</p>
+                      </td>
+                      <td className="px-2 py-3">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                          o.status === "PAID" ? "bg-ozx-success/15 text-ozx-success border border-ozx-success/30" :
+                          o.status === "COURTESY" ? "bg-ozx-primary/15 text-ozx-primary border border-ozx-primary/30" :
+                          o.status === "WAITING" ? "bg-ozx-warning/15 text-ozx-warning border border-ozx-warning/30" :
+                          "bg-white/5 text-ozx-muted border border-white/10"
+                        }`}>{statusLabel(o.status)}</span>
+                      </td>
+                      <td className="px-2 py-3 text-right text-xs text-ozx-muted whitespace-nowrap">
+                        {new Date(o.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                        <br />
+                        <span className="text-[10px]">{new Date(o.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-[10px] text-ozx-muted mt-3">Só pedidos pagos/cortesia contam para a sua meta. Pedidos &quot;aguardando pagamento&quot; só serão computados após a confirmação.</p>
+        </div>
+
         {/* Motivation */}
         <div className="glass-card rounded-3xl p-6 lg:p-8">
           <h3 className="font-display text-xl mb-4">💡 Dicas para acelerar suas vendas</h3>
@@ -106,7 +190,7 @@ export default function LeaderDashboard() {
             <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-ozx-primary flex-shrink-0 mt-0.5" /> Compartilhe seu link no status do WhatsApp e Stories do Instagram regularmente.</li>
             <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-ozx-primary flex-shrink-0 mt-0.5" /> Conte sua experiência — pessoas compram por conexão, não por anúncio.</li>
             <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-ozx-primary flex-shrink-0 mt-0.5" /> Crie urgência: lembre dos lotes promocionais que estão acabando.</li>
-            <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-ozx-primary flex-shrink-0 mt-0.5" /> Convide quem você acha que vai amar o evento — qualidade > quantidade.</li>
+            <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-ozx-primary flex-shrink-0 mt-0.5" /> Convide quem você acha que vai amar o evento — qualidade &gt; quantidade.</li>
           </ul>
         </div>
       </div>

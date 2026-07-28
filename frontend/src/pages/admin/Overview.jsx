@@ -7,9 +7,11 @@ import { methodLabel } from "../../lib/labels";
 const cards = [
   { key: "total_users", label: "Usuários", icon: Users },
   { key: "total_orders", label: "Pedidos", icon: ShoppingCart },
-  { key: "paid_orders", label: "Pagos", icon: CheckCircle2, color: "text-ozx-success" },
-  { key: "pending_orders", label: "Aguardando", icon: Clock, color: "text-ozx-warning" },
-  { key: "declined_orders", label: "Recusados", icon: XCircle, color: "text-ozx-danger" },
+  { key: "paid_orders", label: "Pedidos pagos", icon: CheckCircle2, color: "text-ozx-success" },
+  { key: "tickets_sold", label: "Ingressos vendidos", icon: Ticket, color: "text-ozx-success", highlight: true },
+  { key: "tickets_pending", label: "Ingressos pendentes", icon: Clock, color: "text-ozx-warning" },
+  { key: "pending_orders", label: "Pedidos aguardando", icon: Clock, color: "text-ozx-warning" },
+  { key: "declined_orders", label: "Pedidos recusados", icon: XCircle, color: "text-ozx-danger" },
   { key: "checked_in", label: "Check-ins", icon: CheckCircle2, color: "text-ozx-primary" },
   { key: "total_leaders", label: "Líderes", icon: Award, color: "text-ozx-primary" },
   { key: "total_coupons", label: "Cupons", icon: Tag, color: "text-ozx-primary" },
@@ -75,6 +77,36 @@ export default function Overview() {
                 <p className="font-display text-xl">{stats?.[c.key] ?? 0}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Tickets summary — dedicated (venue capacity control) */}
+      <div className="glass-card rounded-3xl p-6 lg:p-8 mb-6" data-testid="tickets-summary">
+        <div className="flex items-center gap-2 mb-4">
+          <Ticket className="w-5 h-5 text-ozx-primary" />
+          <p className="text-xs uppercase tracking-wider text-ozx-muted">Ingressos (por pessoa)</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-ozx-success/10 border border-ozx-success/30 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-wider text-ozx-success mb-1">Total vendidos</p>
+            <p className="font-display text-4xl text-ozx-success" data-testid="tickets-sold">{stats?.tickets_sold ?? 0}</p>
+            <p className="text-xs text-ozx-muted mt-1">soma de pagos + cortesia</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-wider text-ozx-muted mb-1">Pagos</p>
+            <p className="font-display text-4xl">{stats?.tickets_paid_only ?? 0}</p>
+            <p className="text-xs text-ozx-muted mt-1">só PAID</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-wider text-ozx-muted mb-1">Cortesias</p>
+            <p className="font-display text-4xl">{stats?.tickets_courtesy ?? 0}</p>
+            <p className="text-xs text-ozx-muted mt-1">líderes + manuais</p>
+          </div>
+          <div className="bg-ozx-warning/10 border border-ozx-warning/30 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-wider text-ozx-warning mb-1">Pendentes</p>
+            <p className="font-display text-4xl text-ozx-warning" data-testid="tickets-pending">{stats?.tickets_pending ?? 0}</p>
+            <p className="text-xs text-ozx-muted mt-1">reservados, sem pagamento</p>
           </div>
         </div>
       </div>

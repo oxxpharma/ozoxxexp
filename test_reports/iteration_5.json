@@ -1,0 +1,33 @@
+{
+  "summary": "Tested new leader dashboard buyers list + courtesy-earned card AND admin Overview 'Ingressos (por pessoa)' block. Wrote 5 pytest cases (all PASS): admin/stats has tickets_sold/pending/paid_only/courtesy ints with sold==paid_only+courtesy; non-leader gets 404 on /api/me/leader; leader empty state returns buyers=[] and courtesy=null; buyers array populates correctly with expected fields (holder_name, quantity, status, ticket_type_name, lot_name) and no _id leak; courtesy object populates when goal reached (courtesy_credential_issued=true + COURTESY order with courtesy_reason='Líder atingiu meta' + credential) — includes both order and credential without _id. UI test on production URL: admin Overview shows tickets-summary card with tickets-sold=23 and tickets-pending=0, and stat-tickets_sold card in the quick metrics grid; LeaderDashboard shows both leader-courtesy-card and leader-buyers-card with 2 buyer rows (data-testid=leader-buyer-{order_id}) and 'Ver minha credencial' navigates to /dashboard?highlight={credential_code}. Fixed one blocking bug: LeaderDashboard.jsx called api.get('/api/me/leader') but axios baseURL already includes /api → resulted in /api/api/me/leader 404 (same bug pattern as iteration 3/4). Replaced with '/me/leader'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Participant Dashboard (unrelated to this iteration)", "issues": ["React console warning: 'Each child in a list should have a unique key prop' in Dashboard render method. Pre-existing, not introduced by this change but should be cleaned up."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_leader_and_stats.py",
+    "/app/test_reports/pytest/iter5_leader_stats.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "leaders_routes.py::_leader_courtesy correctly excludes qr_png from credential projection (good — avoids returning heavy base64 payload). credential_code is returned so frontend can build the highlight link.",
+    "admin_routes.py::stats — tickets_sold is computed as sum of quantity across PAID+COURTESY, matching the 'venue capacity per-person' requirement. Aggregation uses $cond correctly.",
+    "Fixed: LeaderDashboard.jsx line 18 was `api.get('/api/me/leader')` (double /api prefix). This is the same regression pattern main agent fixed in iteration 3/4 (AdminOrders) — recommend a lint rule or codemod to prevent recurrence (grep -n \"api\\.\\(get\\|post\\|put\\|delete\\)(\\\"/api/\" /app/frontend/src returns 0 results after fix).",
+    "buyers table in LeaderDashboard has good empty-state ('Ainda ninguém comprou pelo seu link...'), status badge styling per status, and pt-BR date formatting — no issues."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/LeaderDashboard.jsx (fixed /api/me/leader → /me/leader)",
+    "/app/backend/tests/test_leader_and_stats.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (all assertions)"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 — works. Test leader user created and torn down inline.",
+  "seed_data_creation": "Created & deleted: 1 TEST leader user, 3 TEST orders (2 PAID + 1 COURTESY), 1 TEST credential. All cleaned up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 5 features (leader buyers list, courtesy-earned card, admin ingressos summary) are fully working end-to-end. Only one code fix was needed (double /api prefix in LeaderDashboard.jsx). Pytest file /app/backend/tests/test_leader_and_stats.py can be reused as regression suite — it self-seeds and self-cleans.",
+  "rca of the issue": "LeaderDashboard.jsx used api.get('/api/me/leader'). The shared axios instance in /app/frontend/src/lib/api.js already sets baseURL = `${REACT_APP_BACKEND_URL}/api`, so any relative path starting with '/api' produces a doubled prefix (/api/api/...) → 404. Symptom: LeaderDashboard would call load() → 404 → useEffect catch redirects to /dashboard, making the whole leader UI unreachable. Fix: change to '/me/leader'. Same bug family as iteration 3/4 fixes in AdminOrders.jsx."
+}

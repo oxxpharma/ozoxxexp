@@ -253,6 +253,22 @@ async def stats(user: dict = Depends(admin_only)):
     revenue = rev[0]["total"] if rev else 0
     total_leaders = await db.leaders.count_documents({})
     total_coupons = await db.coupons.count_documents({"is_active": True})
+
+    # Tickets counts (sum of `quantity`) — reflect actual seats occupied at the venue
+    tickets_agg = await db.orders.aggregate([
+        {"$group": {
+            "_id": None,
+            "sold": {"$sum": {"$cond": [{"$in": ["$status", ["PAID", "COURTESY"]]}, "$quantity", 0]}},
+            "pending": {"$sum": {"$cond": [{"$in": ["$status", ["WAITING", "IN_ANALYSIS"]]}, "$quantity", 0]}},
+            "paid_only": {"$sum": {"$cond": [{"$eq": ["$status", "PAID"]}, "$quantity", 0]}},
+            "courtesy": {"$sum": {"$cond": [{"$eq": ["$status", "COURTESY"]}, "$quantity", 0]}},
+        }}
+    ]).to_list(1)
+    tickets_sold = tickets_agg[0]["sold"] if tickets_agg else 0
+    tickets_pending = tickets_agg[0]["pending"] if tickets_agg else 0
+    tickets_paid_only = tickets_agg[0]["paid_only"] if tickets_agg else 0
+    tickets_courtesy = tickets_agg[0]["courtesy"] if tickets_agg else 0
+
     return {
         "total_users": total_users,
         "total_orders": total_orders,
@@ -264,4 +280,8 @@ async def stats(user: dict = Depends(admin_only)):
         "revenue": revenue,
         "total_leaders": total_leaders,
         "total_coupons": total_coupons,
+        "tickets_sold": tickets_sold,
+        "tickets_pending": tickets_pending,
+        "tickets_paid_only": tickets_paid_only,
+        "tickets_courtesy": tickets_courtesy,
     }

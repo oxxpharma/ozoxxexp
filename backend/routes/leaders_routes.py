@@ -14,7 +14,7 @@ def slugify(s: str) -> str:
 
 
 async def _compute_stats(leader: dict) -> dict:
-    """Compute sales/credentials counts for leader."""
+    """Compute sales/credentials counts for leader + buyers list + courtesy order."""
     sales = await db.orders.count_documents({"leader_id": leader["leader_id"], "status": {"$in": ["PAID", "COURTESY"]}})
     agg = await db.orders.aggregate([
         {"$match": {"leader_id": leader["leader_id"], "status": {"$in": ["PAID", "COURTESY"]}}},
@@ -30,6 +30,34 @@ async def _compute_stats(leader: dict) -> dict:
     leader["progress_pct"] = min(100, round((tickets / leader["target_sales"]) * 100, 1)) if leader["target_sales"] > 0 else 0
     leader["goal_reached"] = tickets >= leader["target_sales"]
     return leader
+
+
+async def _leader_buyers(leader_id: str) -> list:
+    """List of buyer orders linked to this leader (most recent first)."""
+    orders = await db.orders.find(
+        {"leader_id": leader_id},
+        {"_id": 0, "order_id": 1, "holder_name": 1, "holder_email": 1, "quantity": 1,
+         "total_amount": 1, "status": 1, "created_at": 1, "ticket_type_name": 1, "lot_name": 1,
+         "payment_method": 1},
+    ).sort("created_at", -1).to_list(500)
+    return orders
+
+
+async def _leader_courtesy(leader: dict) -> dict | None:
+    """The leader's own COURTESY order + credential (once goal is reached)."""
+    if not leader.get("courtesy_credential_issued"):
+        return None
+    order = await db.orders.find_one(
+        {"user_id": leader["user_id"], "status": "COURTESY", "courtesy_reason": "Líder atingiu meta"},
+        {"_id": 0},
+        sort=[("created_at", -1)],
+    )
+    if not order:
+        return None
+    cred = await db.credentials.find_one(
+        {"order_id": order["order_id"]}, {"_id": 0, "qr_png": 0}
+    )
+    return {"order": order, "credential": cred}
 
 
 @router.get("")
@@ -111,4 +139,6 @@ async def my_leader_stats(user: dict = Depends(get_current_user)):
     if not leader:
         raise HTTPException(status_code=404, detail="Você não é líder")
     await _compute_stats(leader)
+    leader["buyers"] = await _leader_buyers(leader["leader_id"])
+    leader["courtesy"] = await _leader_courtesy(leader)
     return leader
