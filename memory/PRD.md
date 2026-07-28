@@ -44,6 +44,12 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 10/06/2026 (v3) — Excluir pedido no admin + fix de bugs pré-existentes
+- **Novo `DELETE /api/admin/orders-actions/{order_id}`** (orders_routes.py): remove o pedido, credenciais associadas e check-ins. Requer role admin. Retorna contadores.
+- **AdminOrders.jsx**: novo botão ícone Trash em cada linha da tabela (com `stopPropagation` para não abrir o modal) e botão "Excluir pedido" no modal de detalhes. `window.confirm()` de segurança antes de deletar.
+- **Fix (out of scope, mas descoberto pelo testing agent)**: 3 handlers no mesmo arquivo estavam com prefixo `/api` duplicado no axios (baseURL já inclui `/api`). Corrigidos: `changeStatus`, `resendEmail`, `createCourtesy`. Sem esse fix o admin não conseguia mudar status, reenviar e-mail nem gerar cortesia.
+- **Testado**: 5/5 backend pytest + 7/7 assertions frontend E2E (create → open → status change → resend → delete).
+
 ## Iteração 10/06/2026 (v2) — Preço dinâmico por método de pagamento
 - Backend (`orders_routes.py::_resolve_price`): agora escolhe `unit_price` conforme `payload.payment_method`. `pix` usa `lot.cash_price` (se > 0), qualquer outro método (`credit_card`) usa `lot.price` (valor total parcelado). Fallback para `lot.price` se `cash_price` vazio.
 - Frontend `Checkout.jsx`: resumo do pedido recalcula ao trocar método. Rótulos dos rádios agora mostram os valores ("PIX à vista R$ 1.200,00" e "Cartão até 10x R$ 130,00 sem juros").
