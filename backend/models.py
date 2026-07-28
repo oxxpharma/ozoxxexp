@@ -187,7 +187,8 @@ class CouponCreate(BaseModel):
     description: Optional[str] = ""
     discount_type: Literal["percent", "fixed"] = "percent"
     discount_value: float
-    max_uses: Optional[int] = None  # null = unlimited
+    max_uses: Optional[int] = None  # null = unlimited (total across everyone)
+    max_uses_per_user: Optional[int] = None  # null = unlimited per user
     valid_until: Optional[str] = None  # ISO
     is_active: bool = True
     allowed_user_ids: Optional[List[str]] = None  # None/[] = qualquer usuário. Populated = só quem tiver o e-mail entre esses users.
@@ -198,6 +199,7 @@ class CouponUpdate(BaseModel):
     discount_type: Optional[Literal["percent", "fixed"]] = None
     discount_value: Optional[float] = None
     max_uses: Optional[int] = None
+    max_uses_per_user: Optional[int] = None
     valid_until: Optional[str] = None
     is_active: Optional[bool] = None
     allowed_user_ids: Optional[List[str]] = None

@@ -272,14 +272,24 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
         if coupon:
             # Enforce user restriction: if coupon has allowed_user_ids, buyer's email must match one of those users
             allowed_user_ids = coupon.get("allowed_user_ids") or []
+            buyer_email = (payload.holder_email or "").strip().lower()
             if allowed_user_ids:
-                buyer_email = (payload.holder_email or "").strip().lower()
                 allowed_user = await db.users.find_one(
                     {"user_id": {"$in": allowed_user_ids}, "email": buyer_email},
                     {"_id": 0, "user_id": 1},
                 )
                 if not allowed_user:
                     raise HTTPException(status_code=403, detail="Este cupom não é válido para o e-mail informado.")
+            # Enforce per-user usage limit
+            max_per_user = coupon.get("max_uses_per_user")
+            if max_per_user:
+                used_by_this_email = await db.orders.count_documents({
+                    "coupon_code": coupon["code"],
+                    "holder_email": buyer_email,
+                    "status": {"$in": ["PAID", "COURTESY", "WAITING", "IN_ANALYSIS"]},
+                })
+                if used_by_this_email >= max_per_user:
+                    raise HTTPException(status_code=400, detail=f"Você já usou este cupom {used_by_this_email}x (limite: {max_per_user})")
             if coupon.get("discount_type") == "percent":
                 discount = subtotal * (coupon["discount_value"] / 100)
             else:

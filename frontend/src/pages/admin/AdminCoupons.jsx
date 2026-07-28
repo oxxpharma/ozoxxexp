@@ -15,6 +15,7 @@ const empty = {
   discount_type: "percent",
   discount_value: 10,
   max_uses: null,
+  max_uses_per_user: null,
   valid_until: null,
   is_active: true,
   allowed_user_ids: [],
@@ -40,6 +41,7 @@ export default function AdminCoupons() {
       ...form,
       discount_value: Number(form.discount_value),
       max_uses: form.max_uses ? Number(form.max_uses) : null,
+      max_uses_per_user: form.max_uses_per_user ? Number(form.max_uses_per_user) : null,
       allowed_user_ids: form.allowed_user_ids || [],
     };
     try {
@@ -57,6 +59,7 @@ export default function AdminCoupons() {
       discount_type: c.discount_type,
       discount_value: c.discount_value,
       max_uses: c.max_uses,
+      max_uses_per_user: c.max_uses_per_user,
       valid_until: c.valid_until,
       is_active: c.is_active,
       allowed_user_ids: c.allowed_user_ids || [],
@@ -124,13 +127,19 @@ export default function AdminCoupons() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs uppercase text-ozx-muted">Usos máx (vazio = ilimitado)</Label>
-                  <Input type="number" value={form.max_uses || ""} onChange={(e) => setForm({ ...form, max_uses: e.target.value })} className="bg-white/5 border-white/10 text-white" />
+                  <Label className="text-xs uppercase text-ozx-muted">Usos máx total (vazio = ilimitado)</Label>
+                  <Input type="number" value={form.max_uses || ""} onChange={(e) => setForm({ ...form, max_uses: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="coupon-form-max-uses" />
+                  <p className="text-[10px] text-ozx-muted mt-1">Soma de todos os usuários</p>
                 </div>
                 <div>
-                  <Label className="text-xs uppercase text-ozx-muted">Válido até (ISO)</Label>
-                  <Input value={form.valid_until || ""} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} placeholder="2026-12-31T23:59:59-03:00" className="bg-white/5 border-white/10 text-white" />
+                  <Label className="text-xs uppercase text-ozx-muted">Usos por usuário (vazio = ilimitado)</Label>
+                  <Input type="number" min="1" value={form.max_uses_per_user || ""} onChange={(e) => setForm({ ...form, max_uses_per_user: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="coupon-form-max-uses-per-user" placeholder="ex: 1" />
+                  <p className="text-[10px] text-ozx-muted mt-1">Ex: 1 = cada e-mail só pode usar 1 vez</p>
                 </div>
+              </div>
+              <div>
+                <Label className="text-xs uppercase text-ozx-muted">Válido até (ISO)</Label>
+                <Input value={form.valid_until || ""} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} placeholder="2026-12-31T23:59:59-03:00" className="bg-white/5 border-white/10 text-white" />
               </div>
               <div className="flex items-center justify-between">
                 <Label>Ativo</Label>
@@ -216,6 +225,7 @@ export default function AdminCoupons() {
               <p className="font-mono font-display text-lg text-ozx-primary">{c.code}</p>
               <p className="text-xs text-ozx-muted">
                 {c.description || "—"} · {c.discount_type === "percent" ? `${c.discount_value}%` : `R$ ${c.discount_value}`} · usado {c.used_count}{c.max_uses ? `/${c.max_uses}` : ""}
+                {c.max_uses_per_user ? ` · ${c.max_uses_per_user}x por usuário` : ""}
               </p>
               {(c.allowed_user_ids || []).length > 0 && (
                 <p className="text-[10px] text-ozx-primary mt-1 flex items-center gap-1" data-testid={`coupon-restricted-${c.code}`}>

@@ -88,4 +88,15 @@ async def validate_coupon(code: str, email: str | None = Query(None)):
         if not allowed_user:
             raise HTTPException(status_code=403, detail="Este cupom não é válido para o e-mail informado.")
 
+    # Per-user usage limit (only enforced when email is provided; final check is server-side at order creation)
+    max_per_user = cup.get("max_uses_per_user")
+    if max_per_user and email:
+        used_by_this_email = await db.orders.count_documents({
+            "coupon_code": code,
+            "holder_email": email.strip().lower(),
+            "status": {"$in": ["PAID", "COURTESY", "WAITING", "IN_ANALYSIS"]},
+        })
+        if used_by_this_email >= max_per_user:
+            raise HTTPException(status_code=400, detail=f"Você já usou este cupom {used_by_this_email}x (limite: {max_per_user})")
+
     return cup

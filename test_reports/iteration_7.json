@@ -1,0 +1,25 @@
+{
+  "summary": "Tested new coupon `max_uses_per_user` feature end-to-end. Backend: 7 new pytest cases (create/update persistence, validate enforcement, order-creation enforcement, per-user isolation across emails, null=unlimited, and coexistence with total max_uses) all pass. Existing test_coupon_restriction.py (9 tests) still pass — no regressions. Frontend: verified `data-testid=coupon-form-max-uses-per-user` input exists alongside `coupon-form-max-uses`; created coupon with per-user=3 saves correctly, row summary shows '3x por usuário', and edit dialog pre-populates the value.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_coupon_per_user_limit.py",
+    "/app/test_reports/pytest/coupon_per_user_limit.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "coupons_routes.validate_coupon: per-user counter uses `if max_per_user and email` — treats max_uses_per_user=0 same as unset. Acceptable per spec (empty/null=unlimited) but worth noting: an admin setting `0` intending 'zero uses' would silently be unlimited. Consider `is not None` if 0 should mean blocked.",
+    "orders_routes.create_order (~L286): the per-user count is checked against current orders, but the request itself then inserts a new order in WAITING status. If two requests race, both could pass the check and exceed the limit. Low priority (checkout race, small window) but not atomic.",
+    "Same race exists for `max_uses` total (pre-existing, not introduced by this change)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_coupon_per_user_limit.py"
+  ],
+  "success_rate": {"backend": "100% (7/7 new + 9/9 existing)", "frontend": "100% (field renders, saves, persists, list summary correct)"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 (from review request)",
+  "seed_data_creation": "None persisted — test coupons/orders/users cleaned up in fixtures; the UI test coupon was manually deleted.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_coupon_per_user_limit.py fixtures depend on active lot for ticket_type_id=tkt_4abdb0d16618 and admin login. If future changes touch coupon logic, run both test_coupon_restriction.py and test_coupon_per_user_limit.py together.",
+  "rca of the issue": "N/A — feature works as specified."
+}
