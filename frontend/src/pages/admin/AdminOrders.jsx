@@ -7,7 +7,7 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Switch } from "../../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
-import { Plus, Mail, Edit3, Eye, Download, RefreshCw } from "lucide-react";
+import { Plus, Mail, Eye, Download, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { statusLabel, methodLabel } from "../../lib/labels";
 
@@ -90,6 +90,20 @@ export default function AdminOrders() {
       setCourtesyForm({ holder_name: "", holder_email: "", holder_cpf: "", holder_phone: "", ticket_type_id: "", lot_id: "", has_companion: false, companion: { name: "", email: "", cpf: "", phone: "" }, notes: "" });
       load();
     } catch (e) { toast.error(e.response?.data?.detail || "Erro"); }
+  };
+
+  const deleteOrder = async (orderId, holderName, ev) => {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    const short = orderId.slice(-10);
+    if (!confirm(`Excluir o pedido ${short} de ${holderName}?\n\nA credencial e o QR Code deste pedido serão removidos permanentemente. Esta ação NÃO pode ser desfeita.`)) return;
+    try {
+      const { data } = await api.delete(`/admin/orders-actions/${orderId}`);
+      toast.success(`Pedido excluído · ${data.credentials_deleted} credencial(is) removida(s)`);
+      if (selected?.order_id === orderId) setSelected(null);
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao excluir");
+    }
   };
 
   const filtered = orders;
@@ -196,7 +210,7 @@ export default function AdminOrders() {
       <div className="glass-card rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-white/5 text-ozx-muted text-xs uppercase tracking-wider">
-            <tr><th className="text-left px-4 py-3">Pedido</th><th className="text-left px-4 py-3">Cliente</th><th className="text-left px-4 py-3">Ingresso</th><th className="text-left px-4 py-3">Total</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Data</th></tr>
+            <tr><th className="text-left px-4 py-3">Pedido</th><th className="text-left px-4 py-3">Cliente</th><th className="text-left px-4 py-3">Ingresso</th><th className="text-left px-4 py-3">Total</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Data</th><th className="text-right px-4 py-3">Ações</th></tr>
           </thead>
           <tbody>
             {filtered.map((o) => (
@@ -214,9 +228,21 @@ export default function AdminOrders() {
                   }`}>{statusLabel(o.status)}</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-ozx-muted">{new Date(o.created_at).toLocaleString("pt-BR")}</td>
+                <td className="px-4 py-3 text-right">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-ozx-danger hover:bg-ozx-danger/10 hover:text-ozx-danger h-8 w-8 p-0"
+                    onClick={(e) => deleteOrder(o.order_id, o.holder_name, e)}
+                    data-testid={`delete-order-${o.order_id}`}
+                    title="Excluir pedido"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-ozx-muted">Nenhum pedido.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-ozx-muted">Nenhum pedido.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -254,6 +280,9 @@ export default function AdminOrders() {
                     </SelectContent>
                   </Select>
                   <Button onClick={resendEmail} variant="outline" className="border-white/15" data-testid="order-resend-email"><Mail className="w-4 h-4 mr-2" /> Reenviar e-mail</Button>
+                  <Button onClick={() => deleteOrder(selected.order_id, selected.holder_name)} variant="outline" className="border-ozx-danger/40 text-ozx-danger hover:bg-ozx-danger/10 hover:text-ozx-danger ml-auto" data-testid="order-delete">
+                    <Trash2 className="w-4 h-4 mr-2" /> Excluir pedido
+                  </Button>
                 </div>
               </div>
 

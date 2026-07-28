@@ -1,0 +1,43 @@
+{
+  "summary": "Tested DELETE order feature (backend + frontend). Backend endpoint DELETE /api/admin/orders-actions/{order_id} works correctly (5/5 pytest cases: admin deletes + purges credentials, 404 on unknown, 401 no auth, 403 non-admin). Frontend had a broken axios path (double /api) that made the delete request 404. FIXED by removing leading `/api` in deleteOrder (api axios instance already has baseURL=/api). After fix, both row-level trash button and modal 'Excluir pedido' work: order disappears, success toast shows, stopPropagation on row button prevents detail modal from opening, modal delete closes the dialog. NOTE: 3 other calls in the same file (changeStatus PUT, resendEmail POST, createCourtesy POST) still have the same double-/api bug — pre-existing, NOT related to this delete task but they are currently broken from the UI.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "AdminOrders — change status (dropdown in modal)",
+        "issue": "PRE-EXISTING BUG (not in this task's scope but discovered): `api.put('/api/admin/orders-actions/${id}/status', ...)` produces /api/api/... → 404. Same for POST /api/admin/orders-actions/${id}/resend-email and POST /api/admin/orders-actions/manual-courtesy. `api` axios instance already has baseURL=`${REACT_APP_BACKEND_URL}/api`. Should be `/admin/orders-actions/...` (no leading /api).",
+        "affected_selectors": ["[data-testid=\"order-status-select\"]", "[data-testid=\"order-resend-email\"]", "[data-testid=\"courtesy-submit\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_delete_order.py",
+    "/app/test_reports/pytest/delete_order_results.xml"
+  ],
+  "action_items": [
+    "Fix pre-existing double-/api bug for the other three calls in /app/frontend/src/pages/admin/AdminOrders.jsx: change `api.put('/api/admin/orders-actions/${selected.order_id}/status', ...)` → `api.put('/admin/orders-actions/${selected.order_id}/status', ...)`; same for `resendEmail` (line ~71) and `createCourtesy` (line ~87). Without this, admins currently cannot change status / resend credential emails / issue manual courtesy from the UI.",
+    "Consider using window.confirm's browser dialog vs a shadcn AlertDialog for a nicer UX (current implementation uses native confirm which is acceptable but looks OS-native)."
+  ],
+  "critical_code_review_comments": [
+    "AdminOrders.jsx mixes two path styles for the same axios instance: some calls use `/admin/orders` (correct) and others use `/api/admin/orders-actions/...` (double /api → 404). The new deleteOrder was written with the wrong prefix and I fixed it, but 3 other pre-existing handlers still have the bug (see integration_issues).",
+    "deleteOrder uses window.confirm — for consistency with the rest of the admin (which uses shadcn Dialog for confirmations elsewhere) a confirm modal component would be nicer, but not required.",
+    "The DELETE backend endpoint does not return 403 explicitly — RBAC is via `require_roles(['admin'])` which returns 403 for wrong role and 401 for no token. Tested and works.",
+    "Cascade delete removes `credentials` and `checkins` but does NOT touch `email_logs`, `password_resets`, `pageviews`, or `user_sessions` linked to the order — probably intentional for audit trail, but worth documenting."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/admin/AdminOrders.jsx (fixed deleteOrder axios path: removed leading /api)",
+    "/app/backend/tests/test_delete_order.py (new test suite, 5 cases, all pass)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% for delete flow after 1 fix"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 — works",
+  "seed_data_creation": "2 orders were deleted during frontend testing (from 47 to 45). Multiple TEST_-prefixed orders created and deleted via backend pytest.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The DELETE /api/admin/orders-actions/{order_id} endpoint is fully validated backend + frontend. Row-level trash button correctly uses stopPropagation so it does not open the detail modal. Modal delete button also works. WATCH OUT for the pre-existing double-/api axios bug in AdminOrders.jsx affecting changeStatus/resendEmail/createCourtesy — those UI buttons will 404 until the main agent fixes them.",
+  "rca of the issue": "Root cause of initial frontend 404s: `api` (in /app/frontend/src/lib/api.js) is an axios instance with `baseURL = ${REACT_APP_BACKEND_URL}/api`. The new deleteOrder handler called `api.delete('/api/admin/orders-actions/${orderId}')`, producing a final URL of `${REACT_APP_BACKEND_URL}/api/api/admin/orders-actions/${orderId}` → 404 Not Found (which surfaced as a red 'Not Found' toast). Mitigation: replaced the path with `/admin/orders-actions/${orderId}` (no leading /api). Same fix should be applied to the other 3 handlers in the same file (changeStatus, resendEmail, createCourtesy) which have the identical mistake but are out of scope for this task."
+}

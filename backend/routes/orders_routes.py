@@ -715,3 +715,14 @@ async def admin_credential_pdf(order_id: str, credential_code: str, user: dict =
     return Response(content=pdf, media_type="application/pdf", headers={
         "Content-Disposition": f"inline; filename=credencial-{credential_code}.pdf"
     })
+
+
+@admin_router.delete("/{order_id}")
+async def admin_delete_order(order_id: str, user: dict = Depends(require_roles(["admin"]))):
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    creds_deleted = (await db.credentials.delete_many({"order_id": order_id})).deleted_count
+    checkins_deleted = (await db.checkins.delete_many({"order_id": order_id})).deleted_count
+    await db.orders.delete_one({"order_id": order_id})
+    return {"ok": True, "credentials_deleted": creds_deleted, "checkins_deleted": checkins_deleted}
