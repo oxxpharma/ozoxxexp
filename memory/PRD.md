@@ -44,6 +44,14 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 11/06/2026 — Painel do Líder completo + métricas de ingressos no admin
+- **`GET /api/me/leader`**: resposta agora inclui `buyers` (lista de pedidos com order_id/holder_name/holder_email/quantity/status/created_at/ticket_type_name/lot_name/payment_method) e `courtesy` (`{order, credential}` quando a meta foi batida e a credencial de cortesia foi gerada).
+- **LeaderDashboard.jsx**: nova seção "Quem comprou pelo seu link" com tabela filtável (empty state incluído) + card "Ingresso conquistado" quando `goal_reached && courtesy_credential_issued`, com botão "Ver minha credencial" que leva pra `/dashboard?highlight={credential_code}`.
+- **`GET /api/admin/stats`**: novos campos `tickets_sold`, `tickets_pending`, `tickets_paid_only`, `tickets_courtesy` (soma de `quantity` por status).
+- **Overview.jsx**: novo bloco "Ingressos (por pessoa)" com 4 cards destacando venda/pagos/cortesia/pendentes (data-testid=`tickets-summary`). Rótulos dos cards de "Pedidos" ficaram mais explícitos.
+- **Testado**: 5/5 pytest + 100% frontend E2E via testing agent (iteration_5.json).
+- **Fix descoberto**: `LeaderDashboard.jsx` usava `/api/me/leader` (baseURL já tem `/api`) — corrigido para `/me/leader`. Mesmo padrão de bug já corrigido em `AdminOrders.jsx`.
+
 ## Iteração 10/06/2026 (v3) — Excluir pedido no admin + fix de bugs pré-existentes
 - **Novo `DELETE /api/admin/orders-actions/{order_id}`** (orders_routes.py): remove o pedido, credenciais associadas e check-ins. Requer role admin. Retorna contadores.
 - **AdminOrders.jsx**: novo botão ícone Trash em cada linha da tabela (com `stopPropagation` para não abrir o modal) e botão "Excluir pedido" no modal de detalhes. `window.confirm()` de segurança antes de deletar.
