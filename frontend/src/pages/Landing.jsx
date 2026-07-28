@@ -367,19 +367,54 @@ export default function Landing() {
                 </div>
               ) : visibleLot ? (
                 <div className="mb-4">
-                  {isSoldOut ? (
-                    <div className="mb-2">
-                      <span className="font-display text-4xl font-semibold text-ozx-muted line-through">R$ {Number(visibleLot.price).toFixed(2).replace(".", ",")}</span>
-                      <p className="font-display text-3xl text-ozx-danger mt-1">ESGOTADO</p>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="text-ozx-muted text-sm">a partir de</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-display text-5xl font-semibold">R$ {Number(visibleLot.price).toFixed(2).replace(".", ",")}</span>
-                      </div>
-                    </>
-                  )}
+                  {(() => {
+                    const fmt = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const hasInstallment = visibleLot.installments_count > 0 && Number(visibleLot.installment_price) > 0;
+                    const hasCash = Number(visibleLot.cash_price) > 0;
+                    if (isSoldOut) {
+                      return (
+                        <div className="mb-2">
+                          {hasInstallment ? (
+                            <span className="font-display text-3xl font-semibold text-ozx-muted line-through">{visibleLot.installments_count}x R$ {fmt(visibleLot.installment_price)}</span>
+                          ) : (
+                            <span className="font-display text-4xl font-semibold text-ozx-muted line-through">R$ {fmt(visibleLot.price)}</span>
+                          )}
+                          <p className="font-display text-3xl text-ozx-danger mt-1">ESGOTADO</p>
+                        </div>
+                      );
+                    }
+                    if (hasInstallment || hasCash) {
+                      return (
+                        <>
+                          {hasInstallment && (
+                            <>
+                              <span className="text-ozx-muted text-sm">a partir de</span>
+                              <div className="flex items-baseline gap-2" data-testid="ticket-installment-price">
+                                <span className="font-display text-5xl font-semibold leading-none">{visibleLot.installments_count}x</span>
+                                <span className="font-display text-4xl font-semibold">R$ {fmt(visibleLot.installment_price)}</span>
+                              </div>
+                            </>
+                          )}
+                          {hasCash && (
+                            <p className="text-ozx-muted text-sm mt-2" data-testid="ticket-cash-price">
+                              ou <span className="text-white font-medium">R$ {fmt(visibleLot.cash_price)}</span> à vista
+                            </p>
+                          )}
+                          {!hasInstallment && hasCash && (
+                            <span className="text-ozx-muted text-xs">preço à vista</span>
+                          )}
+                        </>
+                      );
+                    }
+                    return (
+                      <>
+                        <span className="text-ozx-muted text-sm">a partir de</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-display text-5xl font-semibold">R$ {fmt(visibleLot.price)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                   {visibleLot.valid_until && !isSoldOut && (
                     <p className="text-xs text-ozx-muted mt-3">Válido até {new Date(visibleLot.valid_until).toLocaleDateString("pt-BR")}</p>
                   )}

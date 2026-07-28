@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit3, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { ticket_type_id: "", name: "", price: 0, quantity: 100, valid_until: "", order: 1, is_active: true };
+const empty = { ticket_type_id: "", name: "", price: 0, quantity: 100, valid_until: "", order: 1, is_active: true, installment_price: "", installments_count: "", cash_price: "" };
 
 export default function AdminLots() {
   const [items, setItems] = useState([]);
@@ -25,7 +25,15 @@ export default function AdminLots() {
   useEffect(() => { load(); }, []);
 
   const submit = async () => {
-    const body = { ...form, price: Number(form.price), quantity: Number(form.quantity), order: Number(form.order) };
+    const body = {
+      ...form,
+      price: Number(form.price),
+      quantity: Number(form.quantity),
+      order: Number(form.order),
+      installment_price: form.installment_price === "" || form.installment_price == null ? null : Number(form.installment_price),
+      installments_count: form.installments_count === "" || form.installments_count == null ? null : Number(form.installments_count),
+      cash_price: form.cash_price === "" || form.cash_price == null ? null : Number(form.cash_price),
+    };
     if (!body.valid_until) body.valid_until = null;
     try {
       if (editing) await api.put(`/admin/lots/${editing}`, body);
@@ -35,7 +43,7 @@ export default function AdminLots() {
     } catch (e) { toast.error("Erro"); }
   };
   const del = async (id) => { if (!confirm("Deletar lote?")) return; await api.delete(`/admin/lots/${id}`); load(); };
-  const edit = (l) => { setForm({ ticket_type_id: l.ticket_type_id, name: l.name, price: l.price, quantity: l.quantity, valid_until: l.valid_until || "", order: l.order, is_active: l.is_active }); setEditing(l.lot_id); setOpen(true); };
+  const edit = (l) => { setForm({ ticket_type_id: l.ticket_type_id, name: l.name, price: l.price, quantity: l.quantity, valid_until: l.valid_until || "", order: l.order, is_active: l.is_active, installment_price: l.installment_price ?? "", installments_count: l.installments_count ?? "", cash_price: l.cash_price ?? "" }); setEditing(l.lot_id); setOpen(true); };
 
   return (
     <div>
@@ -82,7 +90,25 @@ export default function AdminLots() {
               <div>
                 <Label className="text-xs uppercase text-ozx-muted">Data limite (lote expira após)</Label>
                 <Input type="datetime-local" value={form.valid_until ? form.valid_until.slice(0, 16) : ""} onChange={(e) => setForm({ ...form, valid_until: e.target.value ? `${e.target.value}:00-03:00` : "" })} className="bg-white/5 border-white/10 text-white" data-testid="lot-form-valid-until" />
-                <p className="text-xs text-ozx-muted mt-1">Deixe vazio para sem data limite. O lote ficará "Encerrado" após esta data, mesmo com vagas.</p>
+                <p className="text-xs text-ozx-muted mt-1">Deixe vazio para sem data limite. O lote ficará &quot;Encerrado&quot; após esta data, mesmo com vagas.</p>
+              </div>
+              <div className="pt-2 border-t border-white/10">
+                <p className="text-xs uppercase tracking-wider text-ozx-primary mb-2">Exibição de preço no card (opcional)</p>
+                <p className="text-xs text-ozx-muted mb-3">Use estes campos pra mostrar &quot;10x R$ 130,00 ou R$ 1.200,00 à vista&quot; na landing. Se deixar vazio, o card mostra só o preço acima.</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs uppercase text-ozx-muted">Parcelas</Label>
+                    <Input type="number" min="1" placeholder="10" value={form.installments_count} onChange={(e) => setForm({ ...form, installments_count: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="lot-form-installments-count" />
+                  </div>
+                  <div>
+                    <Label className="text-xs uppercase text-ozx-muted">Valor da parcela (R$)</Label>
+                    <Input type="number" step="0.01" placeholder="130.00" value={form.installment_price} onChange={(e) => setForm({ ...form, installment_price: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="lot-form-installment-price" />
+                  </div>
+                  <div>
+                    <Label className="text-xs uppercase text-ozx-muted">À vista (R$)</Label>
+                    <Input type="number" step="0.01" placeholder="1200.00" value={form.cash_price} onChange={(e) => setForm({ ...form, cash_price: e.target.value })} className="bg-white/5 border-white/10 text-white" data-testid="lot-form-cash-price" />
+                  </div>
+                </div>
               </div>
               <div className="flex items-center justify-between"><Label>Ativo</Label><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /></div>
               <Button onClick={submit} className="w-full bg-ozx-primary text-ozx-bg" data-testid="lot-form-save">Salvar</Button>

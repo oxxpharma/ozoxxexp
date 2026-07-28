@@ -44,6 +44,12 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 10/06/2026 — Preço parcelado/à vista + cidade da hero configurável
+- **Lotes**: novos campos opcionais `installments_count`, `installment_price`, `cash_price` em `LotCreate/LotUpdate` (models.py) — display-only, não afetam checkout
+- **Admin `/admin/lots`**: seção "Exibição de preço no card (opcional)" com 3 inputs
+- **Landing (`Landing.jsx`)**: card do ingresso mostra em destaque "10x R$ 130,00" e abaixo "ou R$ 1.200,00 à vista" (formato pt-BR com `toLocaleString`). Fallback para o `price` puro se os campos estiverem vazios. Estado esgotado mantém o preço tachado.
+- **Admin `/admin/event`**: novo campo "Cidade (destaque na hero)" que popula `event.location_city`, já usado pelo `<Typewriter>` do hero.
+
 ## Iteração 09/06/2026 — Reativar contas antigas + UI de erro Payment
 - **Botão admin "Reativar contas antigas"** em `/admin/users`: novos endpoints `GET /api/admin/users-actions/orphan-buyers` (preview com contadores) e `POST /api/admin/users-actions/reactivate` (cria usuário com `role=participante` + token de reset válido por 7 dias + envia e-mail via Resend usando template `tpl_account_reactivation`). Vincula pedidos órfãos (`user_id=None`) ao usuário recém-criado. Suporta `dry_run` e `send_emails=false`.
 - **Senha no checkout para guests**: campos opcionais em `Checkout.jsx`. Backend cria usuário com `password_hash` no `/api/orders`, evitando `user_id=None` órfão.

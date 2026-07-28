@@ -46,6 +46,11 @@ export default function EventConfig() {
           <Input value={data.location_address} onChange={set("location_address")} className="bg-white/5 border-white/10 text-white" />
         </div>
         <div>
+          <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Cidade (destaque na hero)</Label>
+          <Input value={data.location_city || ""} onChange={set("location_city")} placeholder="São Paulo" className="bg-white/5 border-white/10 text-white" data-testid="event-location-city" />
+          <p className="text-xs text-ozx-muted mt-1">Aparece em destaque, logo abaixo do título &quot;Ozoxx Experience&quot;.</p>
+        </div>
+        <div>
           <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Descrição</Label>
           <Textarea value={data.description} onChange={set("description")} rows={4} className="bg-white/5 border-white/10 text-white" />
         </div>

@@ -163,6 +163,10 @@ class LotCreate(BaseModel):
     valid_until: Optional[str] = None  # ISO date — lot expires after this
     order: int = 0  # ordering (1st, 2nd, etc)
     is_active: bool = True
+    # Display-only fields shown on the landing card ("10x R$ 130 ou R$ 1200 à vista")
+    installment_price: Optional[float] = None
+    installments_count: Optional[int] = None
+    cash_price: Optional[float] = None
 
 
 class LotUpdate(BaseModel):
@@ -172,6 +176,9 @@ class LotUpdate(BaseModel):
     valid_until: Optional[str] = None
     order: Optional[int] = None
     is_active: Optional[bool] = None
+    installment_price: Optional[float] = None
+    installments_count: Optional[int] = None
+    cash_price: Optional[float] = None
 
 
 # COUPONS
