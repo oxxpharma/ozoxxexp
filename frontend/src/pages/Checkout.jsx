@@ -105,7 +105,8 @@ export default function Checkout() {
   const validateCoupon = async () => {
     if (!coupon.trim()) return;
     try {
-      const { data } = await api.get(`/coupons/validate/${coupon.toUpperCase()}`);
+      const params = holder.holder_email ? `?email=${encodeURIComponent(holder.holder_email)}` : "";
+      const { data } = await api.get(`/coupons/validate/${coupon.toUpperCase()}${params}`);
       setCouponValid(data);
       toast.success(`Cupom aplicado: ${data.discount_type === "percent" ? `${data.discount_value}% off` : `R$ ${data.discount_value} off`}`);
     } catch (e) {

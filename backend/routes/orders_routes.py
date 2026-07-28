@@ -270,6 +270,16 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
     if payload.coupon_code:
         coupon = await db.coupons.find_one({"code": payload.coupon_code.upper(), "is_active": True}, {"_id": 0})
         if coupon:
+            # Enforce user restriction: if coupon has allowed_user_ids, buyer's email must match one of those users
+            allowed_user_ids = coupon.get("allowed_user_ids") or []
+            if allowed_user_ids:
+                buyer_email = (payload.holder_email or "").strip()
+                allowed_user = await db.users.find_one(
+                    {"user_id": {"$in": allowed_user_ids}, "email": {"$regex": f"^{buyer_email}$", "$options": "i"}},
+                    {"_id": 0, "user_id": 1},
+                )
+                if not allowed_user:
+                    raise HTTPException(status_code=403, detail="Este cupom não é válido para o e-mail informado.")
             if coupon.get("discount_type") == "percent":
                 discount = subtotal * (coupon["discount_value"] / 100)
             else:

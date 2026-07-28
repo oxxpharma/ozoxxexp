@@ -1,0 +1,32 @@
+{
+  "summary": "Tested coupon user-restriction feature end-to-end (backend + admin UI). 9/9 pytest cases PASS covering: CouponCreate accepts allowed_user_ids; GET /api/admin/coupons enriches with allowed_users (empty list for open coupons); GET /api/coupons/validate/{code}?email=... returns 400 'exclusivo' when email missing, 403 'não é válido' for wrong email, 200 for matching email (case-insensitive); POST /api/orders enforces server-side (403 for non-allowed email, 200+discount for allowed); PUT /api/admin/coupons/{id} persists allowed_user_ids and re-enrichment works. Frontend UI test on /admin/coupons via Playwright: dialog opens with coupon-user-search input, filtering by 'admin' returns clickable rows (data-testid=coupon-user-<email>), clicking creates chip in coupon-selected-users, saving persists — row shows coupon-restricted-<code> badge with email preview; edit repopulates chips; coupon-remove-user-<email> removes chip; delete cleans up. Cleaned up 4 stale TEST coupons from previous runs.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AdminCoupons dialog", "issues": ["Console warning: DialogContent missing `Description` or `aria-describedby` — a11y improvement, not blocking. Pre-existing across dialogs."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_coupon_restriction.py",
+    "/app/test_reports/pytest/coupon_restriction.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "coupons_routes.py::validate_coupon uses regex-anchored match with $regex on email — email string is passed unescaped into regex. A malicious email like '.*' could bypass restriction OR trigger a ReDoS. Recommend using an exact match on lowered email instead: {'email': email.strip().lower()} with users stored lowercased (they already are, per orders_routes line 226/329). Same issue in orders_routes.py::create_order line 278. Priority: MEDIUM (only admin-created coupon codes; attacker would need to guess code AND supply crafted email as buyer — but still trivial to fix).",
+    "orders_routes.py::create_order coupon restriction correctly runs BEFORE creating the guest user account. Good — no orphan users created on 403.",
+    "AdminCoupons.jsx `filteredUsers.slice(0,30)` caps rendered list to 30. When searching in a large user base, matching users beyond 30 are truncated. Good UX hint present ('Mostrando 30 primeiros'). No issue.",
+    "Cleanup: tests correctly delete coupons in finally blocks. Order created by allowed-user test is not deleted (attempted via /orders-actions/{id} DELETE but only admin has that route and it works — passed). Order was cleaned via admin_session.delete in fixture teardown."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_coupon_restriction.py (new)"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all UI assertions passed)"},
+  "test_credentials": "admin@ozoxx.com / OzoxxAdmin@2025 — works",
+  "seed_data_creation": "Test creates & tears down: 1 TEST user, up to 9 TEST coupons, 1 TEST order per run — all cleaned automatically. Also cleaned 4 stale TEST coupons from a previous run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Coupon user-restriction feature is fully working end-to-end. Regression suite lives at /app/backend/tests/test_coupon_restriction.py — self-seeds & self-cleans. The only recommendation is to harden the regex email match in coupons_routes.py + orders_routes.py by switching to a lowered exact string comparison (minor security/robustness).",
+  "rca of the issue": "No bugs found. Only a hardening suggestion: replace $regex email match with lowered-string exact match to avoid ReDoS/bypass surface."
+}

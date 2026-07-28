@@ -190,6 +190,7 @@ class CouponCreate(BaseModel):
     max_uses: Optional[int] = None  # null = unlimited
     valid_until: Optional[str] = None  # ISO
     is_active: bool = True
+    allowed_user_ids: Optional[List[str]] = None  # None/[] = qualquer usuário. Populated = só quem tiver o e-mail entre esses users.
 
 
 class CouponUpdate(BaseModel):
@@ -199,6 +200,7 @@ class CouponUpdate(BaseModel):
     max_uses: Optional[int] = None
     valid_until: Optional[str] = None
     is_active: Optional[bool] = None
+    allowed_user_ids: Optional[List[str]] = None
 
 
 # LEADERS

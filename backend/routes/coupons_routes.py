@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime, timezone
 
 from db import db
@@ -10,7 +10,19 @@ router = APIRouter(prefix="/api/admin/coupons", tags=["coupons"])
 
 @router.get("")
 async def list_coupons(user: dict = Depends(require_roles(["admin", "comercial"]))):
-    return await db.coupons.find({}, {"_id": 0}).to_list(500)
+    coupons = await db.coupons.find({}, {"_id": 0}).to_list(500)
+    # Enrich with allowed_users details (email + name) for the admin UI
+    for c in coupons:
+        allowed = c.get("allowed_user_ids") or []
+        if allowed:
+            users = await db.users.find(
+                {"user_id": {"$in": allowed}},
+                {"_id": 0, "user_id": 1, "name": 1, "email": 1},
+            ).to_list(100)
+            c["allowed_users"] = users
+        else:
+            c["allowed_users"] = []
+    return coupons
 
 
 @router.post("")
@@ -50,7 +62,7 @@ public_router = APIRouter(prefix="/api/coupons", tags=["coupons-public"])
 
 
 @public_router.get("/validate/{code}")
-async def validate_coupon(code: str):
+async def validate_coupon(code: str, email: str | None = Query(None)):
     code = code.upper().strip()
     cup = await db.coupons.find_one({"code": code, "is_active": True}, {"_id": 0})
     if not cup:
@@ -64,4 +76,16 @@ async def validate_coupon(code: str):
             pass
     if cup.get("max_uses") is not None and cup.get("used_count", 0) >= cup["max_uses"]:
         raise HTTPException(status_code=400, detail="Cupom esgotado")
+
+    allowed_user_ids = cup.get("allowed_user_ids") or []
+    if allowed_user_ids:
+        if not email:
+            raise HTTPException(status_code=400, detail="Este cupom é exclusivo. Informe o e-mail do titular para validar.")
+        allowed_user = await db.users.find_one(
+            {"user_id": {"$in": allowed_user_ids}, "email": {"$regex": f"^{email.strip()}$", "$options": "i"}},
+            {"_id": 0, "user_id": 1},
+        )
+        if not allowed_user:
+            raise HTTPException(status_code=403, detail="Este cupom não é válido para o e-mail informado.")
+
     return cup
