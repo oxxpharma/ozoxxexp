@@ -316,7 +316,19 @@ export default function Checkout() {
                     </div>
                   )}
                   <div className="h-px bg-white/10 my-2" />
-                  <div className="flex justify-between text-lg"><span>Total</span><span className="font-display text-2xl">R$ {total.toFixed(2).replace(".", ",")}</span></div>
+                  {method === "credit_card" && lot.installments_count > 0 && Number(lot.installment_price) > 0 ? (
+                    <div data-testid="checkout-total-installment">
+                      <div className="flex justify-between text-lg items-baseline">
+                        <span>Total</span>
+                        <span className="font-display text-2xl">
+                          {lot.installments_count}x R$ {Number(lot.installment_price).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-ozx-muted text-right mt-1">sem juros · R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} no total</p>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-lg"><span>Total</span><span className="font-display text-2xl">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                  )}
                 </div>
               )}
               <Button type="submit" disabled={loading || !lot} className="w-full bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full py-6 mt-6" data-testid="checkout-submit">
