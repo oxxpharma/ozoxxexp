@@ -374,13 +374,50 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
     _api_origin = _public_base or f"{request.url.scheme}://{request.headers.get('host', '')}"
     notif_url = f"{_api_origin}/api/webhook/pagbank"
 
-    # Check if V2 legacy mode is enabled (no homologation required)
+    # Determine which gateway to use (Asaas or PagBank)
+    integrations = await db.app_settings.find_one({"_id": "integrations"}) or {}
+    gateway = (integrations.get("payment_gateway") or "pagbank").lower()
+
     pb_cfg = await pb_get_config()
     use_v2 = bool(pb_cfg and pb_cfg.get("use_v2"))
     origin = _public_base or request.headers.get("origin") or f"{request.url.scheme}://{request.headers.get('host', '')}"
     redirect_url = f"{origin}/payment/{order_id}"
 
-    if total_amount > 0:
+    if total_amount > 0 and gateway == "asaas":
+        from services.asaas import create_checkout as asaas_checkout
+        asaas_res = await asaas_checkout(
+            order_id=order_id,
+            customer_name=holder_name, customer_email=holder_email,
+            customer_cpf=holder_cpf, customer_phone=holder_phone,
+            amount=total_amount,
+            description=f"{ticket['name']} ({qty}x) — Ozoxx Experience",
+            success_url=redirect_url,
+            cancel_url=f"{origin}/payment/{order_id}?status=canceled",
+            expired_url=f"{origin}/payment/{order_id}?status=expired",
+            max_installment_count=10,
+        )
+        if asaas_res.get("success"):
+            await db.orders.update_one({"order_id": order_id}, {"$set": {
+                "gateway": "asaas",
+                "asaas_checkout_id": asaas_res.get("checkout_id"),
+                "asaas_checkout_url": asaas_res.get("checkout_url"),
+                "payment_link": asaas_res.get("checkout_url"),
+                "updated_at": now_iso(),
+            }, "$unset": {"payment_error": ""}})
+            order["gateway"] = "asaas"
+            order["asaas_checkout_id"] = asaas_res.get("checkout_id")
+            order["asaas_checkout_url"] = asaas_res.get("checkout_url")
+            order["payment_link"] = asaas_res.get("checkout_url")
+            order["payment_ready"] = True
+        else:
+            error_msg = str(asaas_res.get("error") or "Asaas indisponível")[:500]
+            await db.orders.update_one({"order_id": order_id}, {"$set": {
+                "payment_error": error_msg, "gateway": "asaas", "updated_at": now_iso(),
+            }})
+            order["gateway"] = "asaas"
+            order["payment_ready"] = False
+            order["payment_error"] = error_msg
+    elif total_amount > 0:
         if use_v2:
             # V2 legacy: single hosted checkout for ALL payment methods (card/pix/boleto)
             # User picks payment method on PagBank's page. No homologation needed.

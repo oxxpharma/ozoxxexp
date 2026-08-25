@@ -298,6 +298,12 @@ class IntegrationsConfig(BaseModel):
     pagbank_webhook_secret: Optional[str] = ""
     resend_api_key: Optional[str] = ""
     resend_sender: Optional[str] = "onboarding@resend.dev"
+    # Gateway selector + Asaas config
+    payment_gateway: Optional[str] = "pagbank"  # "pagbank" | "asaas"
+    asaas_environment: Optional[str] = "sandbox"  # "sandbox" | "production"
+    asaas_sandbox_token: Optional[str] = ""
+    asaas_production_token: Optional[str] = ""
+    asaas_webhook_token: Optional[str] = ""
 
 
 class PageViewCreate(BaseModel):

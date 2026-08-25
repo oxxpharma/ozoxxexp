@@ -92,7 +92,25 @@ export default function Payment() {
               </div>
               <h2 className="font-display text-3xl mb-6">R$ {Number(order.total_amount).toFixed(2).replace(".", ",")}</h2>
 
-              {isCard && order.pagbank_payment_link ? (
+              {order.gateway === "asaas" && order.asaas_checkout_url ? (
+                <div className="space-y-4" data-testid="payment-asaas-checkout">
+                  <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
+                    <p className="text-sm text-ozx-muted leading-relaxed">
+                      Seu pagamento será concluído no ambiente seguro do <span className="text-white font-medium">Asaas</span>. Lá você escolhe entre <span className="text-white">PIX</span> (à vista) ou <span className="text-white">cartão de crédito</span> em até 10x sem juros.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => { window.location.href = order.asaas_checkout_url; }}
+                    className="w-full bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full py-6 text-base"
+                    data-testid="payment-asaas-go"
+                  >
+                    Ir para o checkout Asaas →
+                  </Button>
+                  <Button variant="ghost" className="w-full text-ozx-muted" onClick={fetchOrder} data-testid="payment-refresh-asaas">
+                    <RefreshCw className="w-4 h-4 mr-2" /> Já paguei, atualizar status
+                  </Button>
+                </div>
+              ) : isCard && order.pagbank_payment_link ? (
                 <div className="space-y-4" data-testid="payment-card-checkout">
                   <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
                     <p className="text-sm text-ozx-muted leading-relaxed">

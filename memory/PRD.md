@@ -44,6 +44,17 @@
 - Link "Palestrantes" no Navbar (com âncora #palestrantes)
 - Verificado: hero mobile sem animação `float` (somente glow circular permanece)
 
+## Iteração 13/06/2026 — Gateway Asaas (novo, hospedado) + selector de gateway no admin
+- **Novo `services/asaas.py`**: cliente HTTP (`find_or_create_customer`, `create_checkout`, `register_webhook`, `get_payment_status`). Suporta ambiente Sandbox e Produção via `app_settings.integrations`.
+- **Novo `routes/asaas_routes.py`**: `POST /api/webhook/asaas` (verifica header `asaas-access-token`, idempotente via unique index em `asaas_webhook_events.event_id`, dispara `_apply_status_to_order` compartilhado com PagBank) + admin endpoints `POST /register-webhook` e `GET /status`.
+- **`create_order`** roteia pra Asaas quando `integrations.payment_gateway == "asaas"`; Se falhar por token vazio ou erro API, order fica com `payment_error` visível. PagBank intacto (`elif total_amount > 0` mantém toda a lógica V2/V4).
+- **Modelo `IntegrationsConfig`**: adicionados `payment_gateway`, `asaas_environment`, `asaas_sandbox_token`, `asaas_production_token`, `asaas_webhook_token` (testing agent flagou que a ausência deles wipava tokens PagBank existentes num PUT — CORRIGIDO).
+- **Admin `/admin/integrations`**: novo card "Gateway de pagamento ativo" com dropdown pagbank/asaas + card Asaas com campos Sandbox/Produção/Webhook Token + botão "Registrar webhook no Asaas" + URL do webhook exibida.
+- **`Payment.jsx`**: quando `order.gateway === 'asaas'`, mostra CTA único "Ir para o checkout Asaas →" (usuário escolhe PIX ou cartão 10x sem juros dentro da página do Asaas).
+- **DB**: novo unique index em `asaas_webhook_events.event_id` (idempotência).
+- **Testado**: 13/13 pytest via testing agent (iteration_8.json) + UI OK. Regressão PagBank confirmada intacta.
+- **Backlog notado pelo testing agent**: `PUT /admin/integrations` usa overwrite completo (não PATCH) — qualquer campo omitido pelo cliente vira default. Considerar `exclude_unset=True` para prevenir clobber de dados em atualizações parciais.
+
 ## Iteração 12/06/2026 (v2) — Limite de usos por usuário nos cupons
 - Novo campo `max_uses_per_user: Optional[int]` em `CouponCreate/CouponUpdate` (independente de `max_uses` total e de `allowed_user_ids`).
 - **`validate` + `create_order`**: contam quantos pedidos com aquele `coupon_code` + `holder_email` (nos status PAID/COURTESY/WAITING/IN_ANALYSIS) o e-mail já teve; se >= limite → 400 "Você já usou este cupom Nx (limite: N)".

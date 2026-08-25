@@ -5,7 +5,8 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Switch } from "../../components/ui/switch";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Zap } from "lucide-react";
+import { CheckCircle2, XCircle, Zap, CreditCard } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 
 export default function Integrations() {
   const [data, setData] = useState(null);
@@ -34,6 +35,25 @@ export default function Integrations() {
     <div className="max-w-3xl">
       <p className="text-xs uppercase tracking-[0.25em] text-ozx-primary mb-2">Integrações</p>
       <h1 className="font-display text-4xl font-medium tracking-tight mb-8">APIs externas</h1>
+
+      {/* Gateway selector */}
+      <div className="glass-card rounded-3xl p-6 lg:p-8 mb-6 border border-ozx-primary/30" data-testid="gateway-selector">
+        <div className="flex items-center gap-2 mb-4">
+          <CreditCard className="w-5 h-5 text-ozx-primary" />
+          <h2 className="font-display text-2xl">Gateway de pagamento ativo</h2>
+        </div>
+        <p className="text-xs text-ozx-muted mb-4">Escolha qual processador será usado nos novos pedidos. Ambos podem ficar configurados; só o selecionado processa cobranças.</p>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <Select value={data.payment_gateway || "pagbank"} onValueChange={(v) => setData({ ...data, payment_gateway: v })}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white sm:max-w-xs" data-testid="gateway-select"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-ozx-bg2 text-white border-white/10">
+              <SelectItem value="pagbank">PagBank / PagSeguro</SelectItem>
+              <SelectItem value="asaas">Asaas</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={save} className="bg-ozx-primary text-ozx-bg font-semibold rounded-full" data-testid="gateway-save">Salvar seleção</Button>
+        </div>
+      </div>
 
       {/* PagBank */}
       <div className="glass-card rounded-3xl p-6 lg:p-8 mb-6">
@@ -75,6 +95,63 @@ export default function Integrations() {
               <Zap className="w-4 h-4 mr-2" /> Testar conexão
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Asaas */}
+      <div className="glass-card rounded-3xl p-6 lg:p-8 mb-6" data-testid="asaas-card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-display text-2xl">Asaas</h2>
+            <p className="text-xs text-ozx-muted">Gateway alternativo — checkout hospedado (PIX + cartão 10x sem juros)</p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Ambiente ativo</Label>
+              <Select value={data.asaas_environment || "sandbox"} onValueChange={(v) => setData({ ...data, asaas_environment: v })}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="asaas-env"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-ozx-bg2 text-white border-white/10">
+                  <SelectItem value="sandbox">Sandbox (testes)</SelectItem>
+                  <SelectItem value="production">Produção</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Access Token — Sandbox</Label>
+            <Input type="password" value={data.asaas_sandbox_token || ""} onChange={set("asaas_sandbox_token")} className="bg-white/5 border-white/10 text-white font-mono" placeholder="$aact_hmlg_..." data-testid="asaas-sandbox-token" />
+            <p className="text-xs text-ozx-muted mt-1">Painel Asaas Sandbox → Integrações → gerar API Key</p>
+          </div>
+          <div>
+            <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Access Token — Produção</Label>
+            <Input type="password" value={data.asaas_production_token || ""} onChange={set("asaas_production_token")} className="bg-white/5 border-white/10 text-white font-mono" placeholder="$aact_prod_..." data-testid="asaas-production-token" />
+            <p className="text-xs text-ozx-muted mt-1">Só necessário quando ambiente = Produção</p>
+          </div>
+          <div>
+            <Label className="text-ozx-muted text-xs uppercase tracking-wider mb-2 block">Webhook Auth Token</Label>
+            <Input type="password" value={data.asaas_webhook_token || ""} onChange={set("asaas_webhook_token")} className="bg-white/5 border-white/10 text-white font-mono" placeholder="segredo de 32+ caracteres" data-testid="asaas-webhook-token" />
+            <p className="text-xs text-ozx-muted mt-1">Segredo compartilhado — Asaas envia no header <code>asaas-access-token</code>. Diferente do Access Token da API.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={save} className="bg-ozx-primary text-ozx-bg font-semibold rounded-full" data-testid="asaas-save">Salvar</Button>
+            <Button
+              variant="outline"
+              className="border-white/15 text-white rounded-full"
+              data-testid="asaas-register-webhook"
+              onClick={async () => {
+                await save();
+                try {
+                  const { data: res } = await api.post("/admin/asaas/register-webhook");
+                  res.success ? toast.success("Webhook registrado no Asaas") : toast.error(res.data?.error || "Falha ao registrar");
+                } catch (e) { toast.error(e.response?.data?.detail || "Erro"); }
+              }}
+            >
+              <Zap className="w-4 h-4 mr-2" /> Registrar webhook no Asaas
+            </Button>
+          </div>
+          <p className="text-[10px] text-ozx-muted">URL do webhook: <code>{typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/asaas</code></p>
         </div>
       </div>
 
