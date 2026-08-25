@@ -4,7 +4,7 @@ import api from "../lib/api";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Copy, RefreshCw, CheckCircle2, AlertCircle, Clock, QrCode } from "lucide-react";
+import { Copy, RefreshCw, CheckCircle2, AlertCircle, Clock, QrCode, Loader2 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
 export default function Payment() {
@@ -93,23 +93,7 @@ export default function Payment() {
               <h2 className="font-display text-3xl mb-6">R$ {Number(order.total_amount).toFixed(2).replace(".", ",")}</h2>
 
               {order.gateway === "asaas" && order.asaas_checkout_url ? (
-                <div className="space-y-4" data-testid="payment-asaas-checkout">
-                  <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
-                    <p className="text-sm text-ozx-muted leading-relaxed">
-                      Seu pagamento será concluído no ambiente seguro do <span className="text-white font-medium">Asaas</span>. Lá você escolhe entre <span className="text-white">PIX</span> (à vista) ou <span className="text-white">cartão de crédito</span> em até 10x sem juros.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => { window.location.href = order.asaas_checkout_url; }}
-                    className="w-full bg-ozx-primary hover:bg-ozx-primaryHover text-ozx-bg font-semibold rounded-full py-6 text-base"
-                    data-testid="payment-asaas-go"
-                  >
-                    Ir para o checkout Asaas →
-                  </Button>
-                  <Button variant="ghost" className="w-full text-ozx-muted" onClick={fetchOrder} data-testid="payment-refresh-asaas">
-                    <RefreshCw className="w-4 h-4 mr-2" /> Já paguei, atualizar status
-                  </Button>
-                </div>
+                <AsaasRedirect order={order} onRefresh={fetchOrder} />
               ) : isCard && order.pagbank_payment_link ? (
                 <div className="space-y-4" data-testid="payment-card-checkout">
                   <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
@@ -211,6 +195,49 @@ export default function Payment() {
           )}
         </motion.div>
       </div>
+    </div>
+  );
+}
+
+function AsaasRedirect({ order, onRefresh }) {
+  const isPix = (order.payment_method || "").toLowerCase() === "pix";
+  const methodLabel = isPix ? "PIX" : "cartão de crédito parcelado em até 10x sem juros";
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      window.location.href = order.asaas_checkout_url;
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [order.asaas_checkout_url]);
+
+  return (
+    <div className="space-y-4" data-testid="payment-asaas-checkout">
+      <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
+        <p className="text-sm text-ozx-muted leading-relaxed">
+          Seu pagamento será concluído em um <span className="text-white font-medium">ambiente seguro de pagamento</span>, com <span className="text-white">{methodLabel}</span>.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-center gap-3 py-6" data-testid="payment-asaas-redirecting">
+        <Loader2 className="w-5 h-5 text-ozx-primary animate-spin" />
+        <p className="text-white font-medium">Redirecionando para o pagamento…</p>
+      </div>
+
+      <p className="text-xs text-center text-ozx-muted">
+        Se não abrir automaticamente,{" "}
+        <a
+          href={order.asaas_checkout_url}
+          className="underline text-ozx-primary hover:text-ozx-primaryHover"
+          data-testid="payment-asaas-fallback-link"
+        >
+          clique aqui
+        </a>
+        .
+      </p>
+
+      <Button variant="ghost" className="w-full text-ozx-muted" onClick={onRefresh} data-testid="payment-refresh-asaas">
+        <RefreshCw className="w-4 h-4 mr-2" /> Já paguei, atualizar status
+      </Button>
     </div>
   );
 }

@@ -117,6 +117,7 @@
   - PIX → `billingTypes=["PIX"]`, `chargeTypes=["DETACHED"]`, sem `installment`
   - Cartão → `billingTypes=["CREDIT_CARD"]`, `chargeTypes=["DETACHED","INSTALLMENT"]` + objeto `installment.maxInstallmentCount`
 - Rota `POST /api/orders` passa `payload.payment_method` para o serviço — cliente que escolhe PIX vê SÓ PIX no checkout Asaas (com valor à vista) e quem escolhe cartão vê SÓ cartão (com valor parcelado)
+- **UX (Payment.jsx)**: página `/payment/:id` para pedidos Asaas agora **redireciona automaticamente após 1.8s** com animação de spinner e texto "Redirecionando para o pagamento…". Texto adaptado ao método escolhido ("com PIX" ou "com cartão de crédito parcelado em até 10x sem juros") e "Asaas" removido — só "ambiente seguro de pagamento". Fallback: link "clique aqui" caso o redirect não dispare
 - **5 testes unitários** em `/app/backend/tests/test_asaas_webhook_register.py` (mocked httpx) — schema webhook, idempotência, trailing slash, criação quando URL diverge, schema do checkout PIX+Cartão — todos passando
 
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)
