@@ -140,3 +140,40 @@ def test_register_webhook_creates_when_url_differs(monkeypatch):
     assert result["already_exists"] is False
     assert len(fake.calls) == 2
     assert fake.calls[1]["method"] == "POST"
+
+
+def test_create_checkout_payload_schema(monkeypatch):
+    """Regression: PIX requires chargeTypes to include DETACHED and item name <= 30 chars."""
+    fake = _FakeRequest([
+        (True, {"data": []}),  # find_or_create_customer -> GET /customers (no match)
+        (True, {"id": "cus_1"}),  # POST /customers
+        (True, {"id": "chk_1", "link": "https://asaas/checkout/xyz", "status": "PENDING"}),  # POST /checkouts
+    ])
+    monkeypatch.setattr(asaas_mod, "_request", fake)
+
+    long_desc = "Ingresso Full Experience VIP Premium (1x) — Ozoxx Experience"
+    result = _run(asaas_mod.create_checkout(
+        order_id="ord_test",
+        customer_name="Fulano",
+        customer_email="fulano@example.com",
+        customer_cpf="39053344705",
+        customer_phone="11999999999",
+        amount=1200.0,
+        description=long_desc,
+        success_url="https://ozoxx.com/ok",
+        cancel_url="https://ozoxx.com/cancel",
+        expired_url="https://ozoxx.com/exp",
+    ))
+
+    assert result["success"] is True
+    checkout_body = fake.calls[2]["body"]
+    # chargeTypes must include DETACHED (PIX) and INSTALLMENT (cartão)
+    assert "DETACHED" in checkout_body["chargeTypes"]
+    assert "INSTALLMENT" in checkout_body["chargeTypes"]
+    # item name must be <= 30 chars
+    item_name = checkout_body["items"][0]["name"]
+    assert len(item_name) <= 30, f"name too long: {item_name!r} ({len(item_name)} chars)"
+    # description in item.description keeps the fuller text
+    assert checkout_body["items"][0]["description"].startswith("Ingresso Full Experience VIP")
+    assert checkout_body["billingTypes"] == ["PIX", "CREDIT_CARD"]
+    assert checkout_body["externalReference"] == "ord_test"

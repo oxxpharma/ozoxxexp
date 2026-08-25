@@ -102,12 +102,13 @@
 - **Mensagem de erro PagBank amigável** em `Payment.jsx`: classifica CPF/e-mail/telefone, mostra dica em pt-BR + botão "← Voltar para o formulário".
 - Texto "12x" → "10x sem juros".
 
-## Iteração 12/02/2026 — Correção do registro de webhook Asaas
-- **Bug**: `POST /v3/webhooks` retornava `invalid_poolInterrupted` (Asaas exige `interrupted: false` e `apiVersion: 3` — não enviávamos)
+## Iteração 12/02/2026 — Correção do registro de webhook Asaas + Checkout
+- **Bug 1**: `POST /v3/webhooks` retornava `invalid_poolInterrupted` (Asaas exige `interrupted: false` e `apiVersion: 3` — não enviávamos)
 - **Fix em `/app/backend/services/asaas.py`**: `register_webhook()` agora envia payload completo com `interrupted: false`, `apiVersion: 3` + mantém `name`, `email`, `enabled`, `sendType`, `authToken`, `events`
 - **Idempotência**: nova função `list_webhooks()` (paginada) — antes do POST, faz `GET /v3/webhooks` e retorna o existente se URL bater (ignorando trailing slash). Evita duplicatas no painel Asaas.
-- Retorno agora inclui `already_exists: bool` para UI diferenciar criação vs reutilização
-- **4 testes unitários** em `/app/backend/tests/test_asaas_webhook_register.py` (mocked httpx) — payload schema, idempotência, trailing slash, criação quando URL diverge — todos passando
+- **Bug 2 (Checkout)**: PIX exigia `chargeTypes: ["DETACHED", "INSTALLMENT"]` (só mandávamos INSTALLMENT) e `items[].name` limitado a 30 chars (mandávamos até 80)
+- **Fix em `create_checkout()`**: `chargeTypes` agora inclui `DETACHED` + `INSTALLMENT`; `name` derivado da parte antes de " — " e truncado a 30 chars; `description` mantém texto completo até 250 chars
+- **5 testes unitários** em `/app/backend/tests/test_asaas_webhook_register.py` (mocked httpx) — schema webhook, idempotência, trailing slash, criação quando URL diverge, schema do checkout PIX+Cartão — todos passando
 
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)
 - **Nova coleção `cpf_discounts`** com CPF, percentual, descrição, ativo, `used_count`

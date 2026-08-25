@@ -93,9 +93,12 @@ async def create_checkout(
     ok, customer = await find_or_create_customer(customer_name, customer_cpf, customer_email, customer_phone)
     customer_id = customer.get("id") if ok else None
 
+    # Asaas requires items[].name <= 30 chars. Take the ticket portion (before em-dash)
+    # and truncate the rest so the buyer sees a clean label.
+    short_name = (description.split(" — ")[0] or description).strip()[:30]
     payload: dict[str, Any] = {
         "billingTypes": ["PIX", "CREDIT_CARD"],
-        "chargeTypes": ["INSTALLMENT"],
+        "chargeTypes": ["DETACHED", "INSTALLMENT"],
         "minutesToExpire": 60,
         "externalReference": order_id,
         "callback": {
@@ -104,7 +107,7 @@ async def create_checkout(
             "expiredUrl": expired_url,
         },
         "items": [{
-            "name": description[:80],
+            "name": short_name,
             "description": description[:250],
             "quantity": 1,
             "value": round(float(amount), 2),
