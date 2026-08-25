@@ -134,23 +134,55 @@ async def create_checkout(
     }
 
 
+WEBHOOK_EVENTS = [
+    "CHECKOUT_PAID", "CHECKOUT_CANCELED", "CHECKOUT_EXPIRED",
+    "PAYMENT_CREATED", "PAYMENT_CONFIRMED", "PAYMENT_RECEIVED",
+    "PAYMENT_REFUNDED", "PAYMENT_CHARGEBACK_REQUESTED",
+    "PAYMENT_OVERDUE",
+]
+
+
+async def list_webhooks() -> tuple[bool, Any]:
+    """List all webhooks configured on the Asaas account (paginated)."""
+    all_items: list[dict] = []
+    offset, limit = 0, 100
+    while True:
+        ok, res = await _request("GET", "/webhooks", params={"offset": offset, "limit": limit})
+        if not ok:
+            return False, res
+        data = res.get("data", []) if isinstance(res, dict) else []
+        all_items.extend(data)
+        if not res.get("hasMore") or len(data) < limit:
+            break
+        offset += limit
+    return True, all_items
+
+
 async def register_webhook(public_url: str, auth_token: str, email: str = "ops@ozoxx.com") -> dict:
-    """Register the webhook endpoint on Asaas. Idempotent-ish: creates a new one each call."""
+    """Register the webhook endpoint on Asaas.
+
+    Idempotent: first lists existing webhooks; if any has the same URL, returns it
+    without creating a duplicate. Otherwise POSTs a new one with the full schema
+    required by Asaas v3 (includes `interrupted` and `apiVersion`).
+    """
+    ok_list, existing = await list_webhooks()
+    if ok_list and isinstance(existing, list):
+        for wh in existing:
+            if (wh.get("url") or "").rstrip("/") == public_url.rstrip("/"):
+                return {"success": True, "data": wh, "already_exists": True}
+
     ok, res = await _request("POST", "/webhooks", body={
         "name": "Ozoxx Experience webhook",
         "url": public_url,
         "email": email,
         "enabled": True,
+        "interrupted": False,
+        "apiVersion": 3,
         "sendType": "SEQUENTIALLY",
         "authToken": auth_token,
-        "events": [
-            "CHECKOUT_PAID", "CHECKOUT_CANCELED", "CHECKOUT_EXPIRED",
-            "PAYMENT_CREATED", "PAYMENT_CONFIRMED", "PAYMENT_RECEIVED",
-            "PAYMENT_REFUNDED", "PAYMENT_CHARGEBACK_REQUESTED",
-            "PAYMENT_OVERDUE",
-        ],
+        "events": WEBHOOK_EVENTS,
     })
-    return {"success": ok, "data": res}
+    return {"success": ok, "data": res, "already_exists": False}
 
 
 async def get_payment_status(payment_id: str) -> dict:
