@@ -4,7 +4,7 @@ import api from "../lib/api";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Copy, RefreshCw, CheckCircle2, AlertCircle, Clock, QrCode, Loader2 } from "lucide-react";
+import { Copy, RefreshCw, CheckCircle2, AlertCircle, Clock, QrCode, ShieldCheck } from "lucide-react";
 import Navbar from "../components/Navbar";
 
 export default function Payment() {
@@ -202,25 +202,82 @@ export default function Payment() {
 function AsaasRedirect({ order, onRefresh }) {
   const isPix = (order.payment_method || "").toLowerCase() === "pix";
   const methodLabel = isPix ? "PIX" : "cartão de crédito parcelado em até 10x sem juros";
+  const REDIRECT_MS = 4200;
 
   useEffect(() => {
     const t = setTimeout(() => {
       window.location.href = order.asaas_checkout_url;
-    }, 1800);
+    }, REDIRECT_MS);
     return () => clearTimeout(t);
   }, [order.asaas_checkout_url]);
 
   return (
-    <div className="space-y-4" data-testid="payment-asaas-checkout">
+    <div className="space-y-6" data-testid="payment-asaas-checkout">
       <div className="glass-card rounded-2xl p-5 bg-ozx-primary/5 border-ozx-primary/20">
         <p className="text-sm text-ozx-muted leading-relaxed">
           Seu pagamento será concluído em um <span className="text-white font-medium">ambiente seguro de pagamento</span>, com <span className="text-white">{methodLabel}</span>.
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-3 py-6" data-testid="payment-asaas-redirecting">
-        <Loader2 className="w-5 h-5 text-ozx-primary animate-spin" />
-        <p className="text-white font-medium">Redirecionando para o pagamento…</p>
+      {/* Loader criativo: anéis pulsantes + órbita de pontos + ícone central */}
+      <div className="relative flex flex-col items-center justify-center py-10" data-testid="payment-asaas-redirecting">
+        <div className="relative w-40 h-40 flex items-center justify-center">
+          {/* anéis pulsantes */}
+          {[0, 0.6, 1.2].map((delay, i) => (
+            <motion.span
+              key={i}
+              className="absolute inset-0 rounded-full border border-ozx-primary/60"
+              initial={{ scale: 0.4, opacity: 0.9 }}
+              animate={{ scale: 1.4, opacity: 0 }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut", delay }}
+            />
+          ))}
+
+          {/* órbita rotativa com 3 pontos */}
+          <motion.div
+            className="absolute inset-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }}
+          >
+            {[0, 120, 240].map((deg) => (
+              <span
+                key={deg}
+                className="absolute top-1/2 left-1/2 w-2.5 h-2.5 -mt-1.5 -ml-1.5 rounded-full bg-ozx-primary shadow-[0_0_12px_2px_rgba(56,178,255,0.6)]"
+                style={{ transform: `rotate(${deg}deg) translate(0, -3.75rem)` }}
+              />
+            ))}
+          </motion.div>
+
+          {/* núcleo com ícone de escudo */}
+          <motion.div
+            className="relative w-20 h-20 rounded-full bg-gradient-to-br from-ozx-primary to-ozx-primary/40 flex items-center justify-center shadow-[0_0_40px_rgba(56,178,255,0.35)]"
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <ShieldCheck className="w-9 h-9 text-ozx-bg" strokeWidth={2.2} />
+          </motion.div>
+        </div>
+
+        <div className="mt-8 text-center">
+          <motion.p
+            className="font-display text-2xl text-white"
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          >
+            Redirecionando para o pagamento
+          </motion.p>
+          <p className="text-xs text-ozx-muted mt-2 tracking-wider uppercase">Preparando ambiente seguro</p>
+        </div>
+
+        {/* barra de progresso */}
+        <div className="mt-6 w-64 h-1 rounded-full bg-white/5 overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-ozx-primary via-white to-ozx-primary rounded-full"
+            initial={{ width: "0%" }}
+            animate={{ width: "100%" }}
+            transition={{ duration: REDIRECT_MS / 1000, ease: "easeInOut" }}
+          />
+        </div>
       </div>
 
       <p className="text-xs text-center text-ozx-muted">
