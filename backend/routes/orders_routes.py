@@ -400,6 +400,7 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
             cancel_url=f"{origin}/payment/{order_id}?status=canceled",
             expired_url=f"{origin}/payment/{order_id}?status=expired",
             max_installment_count=10,
+            payment_method=payload.payment_method,
             customer_postal_code=payload.holder_postal_code or "",
             customer_address=payload.holder_address or "",
             customer_address_number=payload.holder_address_number or "",

@@ -87,6 +87,7 @@ async def create_checkout(
     cancel_url: str,
     expired_url: str,
     max_installment_count: int = 10,
+    payment_method: str = "any",  # "pix" | "credit_card" | "any"
     customer_postal_code: Optional[str] = None,
     customer_address: Optional[str] = None,
     customer_address_number: Optional[str] = None,
@@ -95,12 +96,27 @@ async def create_checkout(
     customer_city: Optional[str] = None,
     customer_state: Optional[str] = None,
 ) -> dict:
-    """Create an Asaas Checkout session — buyer picks PIX or credit card on their page.
+    """Create an Asaas Checkout session.
 
-    We pass `customerData` (not `customer` id) so Asaas can create/reuse the customer
-    on their hosted page. Asaas requires `address`, `addressNumber`, `postalCode`,
-    `province` (bairro), `city` and `state` — we now collect them at checkout.
+    `payment_method` controls which methods appear on the hosted checkout:
+      - "pix"         → billingTypes=[PIX],         chargeTypes=[DETACHED]
+      - "credit_card" → billingTypes=[CREDIT_CARD], chargeTypes=[DETACHED, INSTALLMENT]
+      - any other     → both methods enabled (fallback for legacy callers)
     """
+    method = (payment_method or "any").lower()
+    if method == "pix":
+        billing_types = ["PIX"]
+        charge_types = ["DETACHED"]
+        include_installment = False
+    elif method == "credit_card":
+        billing_types = ["CREDIT_CARD"]
+        charge_types = ["DETACHED", "INSTALLMENT"]
+        include_installment = True
+    else:
+        billing_types = ["PIX", "CREDIT_CARD"]
+        charge_types = ["DETACHED", "INSTALLMENT"]
+        include_installment = True
+
     # Asaas requires items[].name <= 30 chars. Take the ticket portion (before em-dash)
     # and truncate the rest so the buyer sees a clean label.
     short_name = (description.split(" — ")[0] or description).strip()[:30]
@@ -127,8 +143,8 @@ async def create_checkout(
         customer_data["state"] = (customer_state or "").upper()[:2]
 
     payload: dict[str, Any] = {
-        "billingTypes": ["PIX", "CREDIT_CARD"],
-        "chargeTypes": ["DETACHED", "INSTALLMENT"],
+        "billingTypes": billing_types,
+        "chargeTypes": charge_types,
         "minutesToExpire": 60,
         "externalReference": order_id,
         "callback": {
@@ -142,9 +158,10 @@ async def create_checkout(
             "quantity": 1,
             "value": round(float(amount), 2),
         }],
-        "installment": {"maxInstallmentCount": max(1, min(max_installment_count, 21))},
         "customerData": customer_data,
     }
+    if include_installment:
+        payload["installment"] = {"maxInstallmentCount": max(1, min(max_installment_count, 21))}
 
     ok, res = await _request("POST", "/checkouts", body=payload)
     if not ok:

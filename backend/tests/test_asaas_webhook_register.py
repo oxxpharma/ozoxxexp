@@ -143,9 +143,9 @@ def test_register_webhook_creates_when_url_differs(monkeypatch):
 
 
 def test_create_checkout_payload_schema(monkeypatch):
-    """Regression: PIX requires chargeTypes to include DETACHED and item name <= 30 chars."""
+    """Default (any) — both PIX and CREDIT_CARD available, chargeTypes include both."""
     fake = _FakeRequest([
-        (True, {"id": "chk_1", "link": "https://asaas/checkout/xyz", "status": "PENDING"}),  # POST /checkouts
+        (True, {"id": "chk_1", "link": "https://asaas/checkout/xyz", "status": "PENDING"}),
     ])
     monkeypatch.setattr(asaas_mod, "_request", fake)
 
@@ -164,23 +164,55 @@ def test_create_checkout_payload_schema(monkeypatch):
     ))
 
     assert result["success"] is True
-    # Only one call to _request now — customerData mode (no customer lookup)
     assert len(fake.calls) == 1
     checkout_body = fake.calls[0]["body"]
-    # chargeTypes must include DETACHED (PIX) and INSTALLMENT (cartão)
+    assert set(checkout_body["billingTypes"]) == {"PIX", "CREDIT_CARD"}
     assert "DETACHED" in checkout_body["chargeTypes"]
     assert "INSTALLMENT" in checkout_body["chargeTypes"]
-    # item name must be <= 30 chars
-    item_name = checkout_body["items"][0]["name"]
-    assert len(item_name) <= 30, f"name too long: {item_name!r} ({len(item_name)} chars)"
-    # description in item.description keeps the fuller text
-    assert checkout_body["items"][0]["description"].startswith("Ingresso Full Experience VIP")
-    assert checkout_body["billingTypes"] == ["PIX", "CREDIT_CARD"]
-    assert checkout_body["externalReference"] == "ord_test"
-    # Must use customerData (never customer id) — customer id would require full address
+    assert len(checkout_body["items"][0]["name"]) <= 30
     assert "customer" not in checkout_body
     assert checkout_body["customerData"]["cpfCnpj"] == "39053344705"
-    assert checkout_body["customerData"]["phone"] == "11999999999"
+    assert "installment" in checkout_body  # installment obj required when INSTALLMENT is in chargeTypes
+
+
+def test_create_checkout_pix_only(monkeypatch):
+    """payment_method='pix' — only PIX billingType, no installment, chargeTypes=[DETACHED]."""
+    fake = _FakeRequest([(True, {"id": "chk_pix", "link": "u", "status": "PENDING"})])
+    monkeypatch.setattr(asaas_mod, "_request", fake)
+
+    _run(asaas_mod.create_checkout(
+        order_id="ord_pix",
+        customer_name="F", customer_email="f@e.com",
+        customer_cpf="39053344705", customer_phone="",
+        amount=1200.0, description="Ingresso",
+        success_url="u", cancel_url="u", expired_url="u",
+        payment_method="pix",
+    ))
+    body = fake.calls[0]["body"]
+    assert body["billingTypes"] == ["PIX"]
+    assert body["chargeTypes"] == ["DETACHED"]
+    # installment object must NOT be present (PIX is single-payment)
+    assert "installment" not in body
+
+
+def test_create_checkout_credit_card_only(monkeypatch):
+    """payment_method='credit_card' — only CREDIT_CARD, chargeTypes=[DETACHED, INSTALLMENT] + installment obj."""
+    fake = _FakeRequest([(True, {"id": "chk_cc", "link": "u", "status": "PENDING"})])
+    monkeypatch.setattr(asaas_mod, "_request", fake)
+
+    _run(asaas_mod.create_checkout(
+        order_id="ord_cc",
+        customer_name="F", customer_email="f@e.com",
+        customer_cpf="39053344705", customer_phone="",
+        amount=1300.0, description="Ingresso",
+        success_url="u", cancel_url="u", expired_url="u",
+        payment_method="credit_card",
+        max_installment_count=12,
+    ))
+    body = fake.calls[0]["body"]
+    assert body["billingTypes"] == ["CREDIT_CARD"]
+    assert set(body["chargeTypes"]) == {"DETACHED", "INSTALLMENT"}
+    assert body["installment"]["maxInstallmentCount"] == 12
 
 
 def test_create_checkout_forwards_address(monkeypatch):

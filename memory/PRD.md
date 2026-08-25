@@ -112,7 +112,11 @@
 - **Fix**: removido lookup `find_or_create_customer` da rota de checkout — sempre usamos `customerData` (nome/CPF/email/phone) e deixamos o Asaas coletar endereço na página hospedada
 - **Bug 4 (Endereço obrigatório)**: mesmo com `customerData`, o Asaas exige `address/addressNumber/postalCode/province/state` na criação do checkout
 - **Feature**: adicionada seção "Endereço de cobrança" no `/checkout` com **auto-preenchimento via ViaCEP** — usuário digita CEP e Rua/Bairro/Cidade/UF são preenchidos automaticamente. Persistidos em `orders.holder_postal_code/address/address_number/complement/neighborhood` e enviados ao Asaas em `customerData.postalCode/address/addressNumber/complement/province/cityName/state`
-- **Testes** subiram para 6: novo `test_create_checkout_forwards_address` valida que `postalCode` fica só com dígitos, `state` maiúsculo (2 chars), `neighborhood` → `province`
+- **Testes** subiram para 8: novos `test_create_checkout_pix_only` e `test_create_checkout_credit_card_only` + `test_create_checkout_forwards_address` valida que `postalCode` fica só com dígitos, `state` maiúsculo (2 chars), `neighborhood` → `province`
+- **Método de pagamento respeitado no Asaas** (12/02): `create_checkout` aceita `payment_method="pix"|"credit_card"|"any"` e monta o payload conforme docs oficiais Asaas:
+  - PIX → `billingTypes=["PIX"]`, `chargeTypes=["DETACHED"]`, sem `installment`
+  - Cartão → `billingTypes=["CREDIT_CARD"]`, `chargeTypes=["DETACHED","INSTALLMENT"]` + objeto `installment.maxInstallmentCount`
+- Rota `POST /api/orders` passa `payload.payment_method` para o serviço — cliente que escolhe PIX vê SÓ PIX no checkout Asaas (com valor à vista) e quem escolhe cartão vê SÓ cartão (com valor parcelado)
 - **5 testes unitários** em `/app/backend/tests/test_asaas_webhook_register.py` (mocked httpx) — schema webhook, idempotência, trailing slash, criação quando URL diverge, schema do checkout PIX+Cartão — todos passando
 
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)
