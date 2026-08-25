@@ -145,8 +145,6 @@ def test_register_webhook_creates_when_url_differs(monkeypatch):
 def test_create_checkout_payload_schema(monkeypatch):
     """Regression: PIX requires chargeTypes to include DETACHED and item name <= 30 chars."""
     fake = _FakeRequest([
-        (True, {"data": []}),  # find_or_create_customer -> GET /customers (no match)
-        (True, {"id": "cus_1"}),  # POST /customers
         (True, {"id": "chk_1", "link": "https://asaas/checkout/xyz", "status": "PENDING"}),  # POST /checkouts
     ])
     monkeypatch.setattr(asaas_mod, "_request", fake)
@@ -166,7 +164,9 @@ def test_create_checkout_payload_schema(monkeypatch):
     ))
 
     assert result["success"] is True
-    checkout_body = fake.calls[2]["body"]
+    # Only one call to _request now — customerData mode (no customer lookup)
+    assert len(fake.calls) == 1
+    checkout_body = fake.calls[0]["body"]
     # chargeTypes must include DETACHED (PIX) and INSTALLMENT (cartão)
     assert "DETACHED" in checkout_body["chargeTypes"]
     assert "INSTALLMENT" in checkout_body["chargeTypes"]
@@ -177,3 +177,7 @@ def test_create_checkout_payload_schema(monkeypatch):
     assert checkout_body["items"][0]["description"].startswith("Ingresso Full Experience VIP")
     assert checkout_body["billingTypes"] == ["PIX", "CREDIT_CARD"]
     assert checkout_body["externalReference"] == "ord_test"
+    # Must use customerData (never customer id) — customer id would require full address
+    assert "customer" not in checkout_body
+    assert checkout_body["customerData"]["cpfCnpj"] == "39053344705"
+    assert checkout_body["customerData"]["phone"] == "11999999999"

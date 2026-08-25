@@ -108,6 +108,8 @@
 - **Idempotência**: nova função `list_webhooks()` (paginada) — antes do POST, faz `GET /v3/webhooks` e retorna o existente se URL bater (ignorando trailing slash). Evita duplicatas no painel Asaas.
 - **Bug 2 (Checkout)**: PIX exigia `chargeTypes: ["DETACHED", "INSTALLMENT"]` (só mandávamos INSTALLMENT) e `items[].name` limitado a 30 chars (mandávamos até 80)
 - **Fix em `create_checkout()`**: `chargeTypes` agora inclui `DETACHED` + `INSTALLMENT`; `name` derivado da parte antes de " — " e truncado a 30 chars; `description` mantém texto completo até 250 chars
+- **Bug 3 (Checkout)**: passar `customer: <id>` exigia que o customer no Asaas tivesse `phone/address/addressNumber/postalCode/province` — não coletamos endereço no form, então dava erro
+- **Fix**: removido lookup `find_or_create_customer` da rota de checkout — sempre usamos `customerData` (nome/CPF/email/phone) e deixamos o Asaas coletar endereço na página hospedada
 - **5 testes unitários** em `/app/backend/tests/test_asaas_webhook_register.py` (mocked httpx) — schema webhook, idempotência, trailing slash, criação quando URL diverge, schema do checkout PIX+Cartão — todos passando
 
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)

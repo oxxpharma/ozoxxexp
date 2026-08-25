@@ -88,11 +88,13 @@ async def create_checkout(
     expired_url: str,
     max_installment_count: int = 10,
 ) -> dict:
-    """Create an Asaas Checkout session — buyer picks PIX or credit card on their page."""
-    # Ensure customer exists (nice for reporting inside Asaas)
-    ok, customer = await find_or_create_customer(customer_name, customer_cpf, customer_email, customer_phone)
-    customer_id = customer.get("id") if ok else None
+    """Create an Asaas Checkout session — buyer picks PIX or credit card on their page.
 
+    We pass `customerData` (not `customer` id) so Asaas can create/reuse the customer
+    on their hosted page and prompt the buyer for any missing fields (address, etc.).
+    Passing a `customer` id requires the customer to already have phone/address/CEP,
+    which we don't collect in our form.
+    """
     # Asaas requires items[].name <= 30 chars. Take the ticket portion (before em-dash)
     # and truncate the rest so the buyer sees a clean label.
     short_name = (description.split(" — ")[0] or description).strip()[:30]
@@ -113,17 +115,14 @@ async def create_checkout(
             "value": round(float(amount), 2),
         }],
         "installment": {"maxInstallmentCount": max(1, min(max_installment_count, 21))},
-    }
-    if customer_id:
-        payload["customer"] = customer_id
-    else:
-        payload["customerData"] = {
+        "customerData": {
             "name": customer_name,
             "cpfCnpj": only_digits(customer_cpf),
             "email": customer_email,
-        }
-        if customer_phone:
-            payload["customerData"]["phone"] = only_digits(customer_phone)
+        },
+    }
+    if customer_phone:
+        payload["customerData"]["phone"] = only_digits(customer_phone)
 
     ok, res = await _request("POST", "/checkouts", body=payload)
     if not ok:
