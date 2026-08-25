@@ -26,7 +26,7 @@ export default function Checkout() {
   const [selectedLot, setSelectedLot] = useState("");
   const [hasCompanion, setHasCompanion] = useState(false);
   const [companion, setCompanion] = useState({ name: "", email: "", cpf: "", phone: "" });
-  const [holder, setHolder] = useState({ holder_name: "", holder_email: "", holder_cpf: "", holder_phone: "", holder_birth_date: "", holder_gender: "", holder_city: "", holder_state: "" });
+  const [holder, setHolder] = useState({ holder_name: "", holder_email: "", holder_cpf: "", holder_phone: "", holder_birth_date: "", holder_gender: "", holder_city: "", holder_state: "", holder_postal_code: "", holder_address: "", holder_address_number: "", holder_complement: "", holder_neighborhood: "" });
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [method, setMethod] = useState("pix");
@@ -101,6 +101,37 @@ export default function Checkout() {
     }, 500);
     return () => clearTimeout(t);
   }, [holder.holder_cpf]);
+
+  // Auto-preencher endereço quando o CEP (8 dígitos) for informado — ViaCEP
+  const [cepLoading, setCepLoading] = useState(false);
+  useEffect(() => {
+    const cep = (holder.holder_postal_code || "").replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    const t = setTimeout(async () => {
+      setCepLoading(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await res.json();
+        if (data.erro) {
+          toast.error("CEP não encontrado");
+          return;
+        }
+        setHolder((h) => ({
+          ...h,
+          holder_address: data.logradouro || h.holder_address,
+          holder_neighborhood: data.bairro || h.holder_neighborhood,
+          holder_city: data.localidade || h.holder_city,
+          holder_state: (data.uf || h.holder_state).toUpperCase(),
+        }));
+        toast.success("Endereço preenchido automaticamente");
+      } catch {
+        toast.error("Não foi possível consultar o CEP");
+      } finally {
+        setCepLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [holder.holder_postal_code]);
 
   const validateCoupon = async () => {
     if (!coupon.trim()) return;
@@ -212,6 +243,35 @@ export default function Checkout() {
                 </div>
                 <Field label="Cidade" value={holder.holder_city} on={(v) => setHolder({ ...holder, holder_city: v })} />
                 <Field label="Estado (UF)" value={holder.holder_state} on={(v) => setHolder({ ...holder, holder_state: v.toUpperCase().slice(0, 2) })} />
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-white/5">
+                <h3 className="font-display text-lg mb-1">Endereço de cobrança</h3>
+                <p className="text-sm text-ozx-muted mb-4">Digite seu CEP e completaremos automaticamente. Necessário para emissão da cobrança.</p>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                  <div className="md:col-span-2">
+                    <Field
+                      label={cepLoading ? "Buscando CEP..." : "CEP"}
+                      value={holder.holder_postal_code}
+                      on={(v) => setHolder({ ...holder, holder_postal_code: v.replace(/\D/g, "").slice(0, 8) })}
+                      placeholder="Só números"
+                      required
+                      testId="checkout-holder-postal-code"
+                    />
+                  </div>
+                  <div className="md:col-span-4">
+                    <Field label="Rua / Logradouro" value={holder.holder_address} on={(v) => setHolder({ ...holder, holder_address: v })} required testId="checkout-holder-address" />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Field label="Número" value={holder.holder_address_number} on={(v) => setHolder({ ...holder, holder_address_number: v })} required testId="checkout-holder-address-number" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Field label="Complemento" value={holder.holder_complement} on={(v) => setHolder({ ...holder, holder_complement: v })} placeholder="Apto, bloco…" testId="checkout-holder-complement" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Field label="Bairro" value={holder.holder_neighborhood} on={(v) => setHolder({ ...holder, holder_neighborhood: v })} required testId="checkout-holder-neighborhood" />
+                  </div>
+                </div>
               </div>
 
               {!user && (

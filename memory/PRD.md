@@ -110,6 +110,9 @@
 - **Fix em `create_checkout()`**: `chargeTypes` agora inclui `DETACHED` + `INSTALLMENT`; `name` derivado da parte antes de " — " e truncado a 30 chars; `description` mantém texto completo até 250 chars
 - **Bug 3 (Checkout)**: passar `customer: <id>` exigia que o customer no Asaas tivesse `phone/address/addressNumber/postalCode/province` — não coletamos endereço no form, então dava erro
 - **Fix**: removido lookup `find_or_create_customer` da rota de checkout — sempre usamos `customerData` (nome/CPF/email/phone) e deixamos o Asaas coletar endereço na página hospedada
+- **Bug 4 (Endereço obrigatório)**: mesmo com `customerData`, o Asaas exige `address/addressNumber/postalCode/province/state` na criação do checkout
+- **Feature**: adicionada seção "Endereço de cobrança" no `/checkout` com **auto-preenchimento via ViaCEP** — usuário digita CEP e Rua/Bairro/Cidade/UF são preenchidos automaticamente. Persistidos em `orders.holder_postal_code/address/address_number/complement/neighborhood` e enviados ao Asaas em `customerData.postalCode/address/addressNumber/complement/province/cityName/state`
+- **Testes** subiram para 6: novo `test_create_checkout_forwards_address` valida que `postalCode` fica só com dígitos, `state` maiúsculo (2 chars), `neighborhood` → `province`
 - **5 testes unitários** em `/app/backend/tests/test_asaas_webhook_register.py` (mocked httpx) — schema webhook, idempotência, trailing slash, criação quando URL diverge, schema do checkout PIX+Cartão — todos passando
 
 ## Iteração 08/06/2026 — Descontos por CPF (whitelist com %)

@@ -343,6 +343,11 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
         "holder_gender": payload.holder_gender or "",
         "holder_city": payload.holder_city or "",
         "holder_state": payload.holder_state or "",
+        "holder_postal_code": payload.holder_postal_code or "",
+        "holder_address": payload.holder_address or "",
+        "holder_address_number": payload.holder_address_number or "",
+        "holder_complement": payload.holder_complement or "",
+        "holder_neighborhood": payload.holder_neighborhood or "",
         "has_companion": payload.has_companion,
         "companion": payload.companion.model_dump() if payload.companion else None,
         "coupon_code": coupon["code"] if coupon else None,
@@ -395,6 +400,13 @@ async def create_order_endpoint(payload: OrderCreate, request: Request):
             cancel_url=f"{origin}/payment/{order_id}?status=canceled",
             expired_url=f"{origin}/payment/{order_id}?status=expired",
             max_installment_count=10,
+            customer_postal_code=payload.holder_postal_code or "",
+            customer_address=payload.holder_address or "",
+            customer_address_number=payload.holder_address_number or "",
+            customer_complement=payload.holder_complement or "",
+            customer_neighborhood=payload.holder_neighborhood or "",
+            customer_city=payload.holder_city or "",
+            customer_state=payload.holder_state or "",
         )
         if asaas_res.get("success"):
             await db.orders.update_one({"order_id": order_id}, {"$set": {

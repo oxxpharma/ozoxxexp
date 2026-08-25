@@ -181,3 +181,40 @@ def test_create_checkout_payload_schema(monkeypatch):
     assert "customer" not in checkout_body
     assert checkout_body["customerData"]["cpfCnpj"] == "39053344705"
     assert checkout_body["customerData"]["phone"] == "11999999999"
+
+
+def test_create_checkout_forwards_address(monkeypatch):
+    """Asaas requires address fields on customerData when not linking by customer id."""
+    fake = _FakeRequest([
+        (True, {"id": "chk_2", "link": "https://asaas/x", "status": "PENDING"}),
+    ])
+    monkeypatch.setattr(asaas_mod, "_request", fake)
+
+    result = _run(asaas_mod.create_checkout(
+        order_id="ord_addr",
+        customer_name="Maria da Silva",
+        customer_email="maria@example.com",
+        customer_cpf="39053344705",
+        customer_phone="11999999999",
+        amount=100.0,
+        description="Ingresso VIP (1x) — Ozoxx",
+        success_url="https://ozoxx.com/ok",
+        cancel_url="https://ozoxx.com/cancel",
+        expired_url="https://ozoxx.com/exp",
+        customer_postal_code="01310-100",
+        customer_address="Av. Paulista",
+        customer_address_number="1000",
+        customer_complement="Sala 42",
+        customer_neighborhood="Bela Vista",
+        customer_city="São Paulo",
+        customer_state="sp",
+    ))
+    assert result["success"] is True
+    cd = fake.calls[0]["body"]["customerData"]
+    assert cd["postalCode"] == "01310100"  # digits only
+    assert cd["address"] == "Av. Paulista"
+    assert cd["addressNumber"] == "1000"
+    assert cd["complement"] == "Sala 42"
+    assert cd["province"] == "Bela Vista"  # Asaas calls neighborhood "province"
+    assert cd["cityName"] == "São Paulo"
+    assert cd["state"] == "SP"  # uppercased, 2 chars

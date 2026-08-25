@@ -87,17 +87,45 @@ async def create_checkout(
     cancel_url: str,
     expired_url: str,
     max_installment_count: int = 10,
+    customer_postal_code: Optional[str] = None,
+    customer_address: Optional[str] = None,
+    customer_address_number: Optional[str] = None,
+    customer_complement: Optional[str] = None,
+    customer_neighborhood: Optional[str] = None,
+    customer_city: Optional[str] = None,
+    customer_state: Optional[str] = None,
 ) -> dict:
     """Create an Asaas Checkout session — buyer picks PIX or credit card on their page.
 
     We pass `customerData` (not `customer` id) so Asaas can create/reuse the customer
-    on their hosted page and prompt the buyer for any missing fields (address, etc.).
-    Passing a `customer` id requires the customer to already have phone/address/CEP,
-    which we don't collect in our form.
+    on their hosted page. Asaas requires `address`, `addressNumber`, `postalCode`,
+    `province` (bairro), `city` and `state` — we now collect them at checkout.
     """
     # Asaas requires items[].name <= 30 chars. Take the ticket portion (before em-dash)
     # and truncate the rest so the buyer sees a clean label.
     short_name = (description.split(" — ")[0] or description).strip()[:30]
+    customer_data: dict[str, Any] = {
+        "name": customer_name,
+        "cpfCnpj": only_digits(customer_cpf),
+        "email": customer_email,
+    }
+    if customer_phone:
+        customer_data["phone"] = only_digits(customer_phone)
+    if customer_postal_code:
+        customer_data["postalCode"] = only_digits(customer_postal_code)
+    if customer_address:
+        customer_data["address"] = customer_address
+    if customer_address_number:
+        customer_data["addressNumber"] = customer_address_number
+    if customer_complement:
+        customer_data["complement"] = customer_complement
+    if customer_neighborhood:
+        customer_data["province"] = customer_neighborhood
+    if customer_city:
+        customer_data["cityName"] = customer_city
+    if customer_state:
+        customer_data["state"] = (customer_state or "").upper()[:2]
+
     payload: dict[str, Any] = {
         "billingTypes": ["PIX", "CREDIT_CARD"],
         "chargeTypes": ["DETACHED", "INSTALLMENT"],
@@ -115,14 +143,8 @@ async def create_checkout(
             "value": round(float(amount), 2),
         }],
         "installment": {"maxInstallmentCount": max(1, min(max_installment_count, 21))},
-        "customerData": {
-            "name": customer_name,
-            "cpfCnpj": only_digits(customer_cpf),
-            "email": customer_email,
-        },
+        "customerData": customer_data,
     }
-    if customer_phone:
-        payload["customerData"]["phone"] = only_digits(customer_phone)
 
     ok, res = await _request("POST", "/checkouts", body=payload)
     if not ok:

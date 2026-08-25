@@ -267,6 +267,11 @@ class OrderCreate(BaseModel):
     holder_gender: Optional[str] = None
     holder_city: Optional[str] = None
     holder_state: Optional[str] = None
+    holder_postal_code: Optional[str] = None
+    holder_address: Optional[str] = None
+    holder_address_number: Optional[str] = None
+    holder_complement: Optional[str] = None
+    holder_neighborhood: Optional[str] = None
     utm: Optional[UTMData] = None
     account_password: Optional[str] = None  # Quando guest faz checkout, define a senha da conta criada
 
