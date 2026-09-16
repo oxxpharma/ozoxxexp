@@ -484,7 +484,7 @@ export default function Landing() {
           <div className="absolute inset-0 bg-gradient-to-br from-ozx-secondary/40 via-transparent to-ozx-primary/10" />
           <div className="relative">
             <h2 className="font-display text-4xl sm:text-6xl font-medium tracking-tight mb-6 max-w-3xl mx-auto">
-              Não fique de fora. <span className="text-ozx-primary">São Paulo te espera.</span>
+              Não fique de fora. <span className="text-ozx-primary">Florianópolis te espera.</span>
             </h2>
             <Button
               onClick={() => navigate("/checkout")}
