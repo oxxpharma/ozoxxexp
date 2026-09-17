@@ -9,7 +9,8 @@ Scripts para subir e manter o sistema em um servidor próprio (Ubuntu 22.04+ / D
 | `install.sh` | Instalação inicial completa (Python, Node, MongoDB, nginx, systemd, build) | N/A (primeira vez) |
 | `start.sh` | Inicia backend + nginx + mongod | — |
 | `restart.sh [graceful\|hard]` | Reload do backend (default: graceful via SIGHUP) + reload do nginx | **zero** no modo graceful |
-| `update.sh` | Pull do git, build paralelo, swap atômico, reload gracioso, rollback automático em falha | **zero** |
+| `update.sh` | Pull do git, build paralelo no servidor, swap atômico, reload gracioso | **zero** |
+| `deploy_prebuilt.sh` | Deploy leve via CI/CD (recebe frontend compilado no GitHub e atualiza backend) | **zero** |
 
 ## Pré-requisitos
 
