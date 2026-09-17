@@ -1,4 +1,4 @@
-name: Build and Deploy (CI/CD)
+﻿name: Build and Deploy (CI/CD)
 
 on:
   push:
@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-frontend:
-    name: Build Frontend
+  build:
+    name: Build Frontend & Package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         working-directory: frontend
         run: |
           yarn install
@@ -37,36 +37,39 @@ jobs:
         run: |
           yarn build
 
-      - name: Compress frontend build artifact
+      - name: Package application
         run: |
-          cd frontend/build
-          tar -czf ../../frontend-build.tar.gz .
+          mkdir -p deploy-package/frontend_build
+          cp -r frontend/build/* deploy-package/frontend_build/
+          cp -r backend deploy-package/
+          cp -r scripts deploy-package/
+          tar -czf deploy-package.tar.gz -C deploy-package .
 
-      - name: Upload frontend artifact
+      - name: Upload deployment package
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
-          path: frontend-build.tar.gz
+          name: deploy-package
+          path: deploy-package.tar.gz
           retention-days: 1
 
-  deploy-production:
+  deploy:
     name: Deploy to Production Server
-    needs: build-frontend
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download frontend artifact
+      - name: Download deployment package
         uses: actions/download-artifact@v4
         with:
-          name: frontend-build
+          name: deploy-package
 
-      - name: Copy build artifact to server via SCP
+      - name: Copy package to server via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          source: "frontend-build.tar.gz"
+          source: "deploy-package.tar.gz"
           target: "/tmp"
 
       - name: Execute deploy on server via SSH
@@ -78,13 +81,21 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           script: |
-            set -e
+            set -euo pipefail
             APP_DIR="/opt/ozoxx"
-            # Garante que o script mais recente exista mesmo no primeiro deploy
-            if [ -d "$APP_DIR" ]; then
-              cd "$APP_DIR"
-              git fetch origin main --quiet || true
-              git checkout origin/main -- scripts/deploy_prebuilt.sh 2>/dev/null || true
-              chmod +x scripts/deploy_prebuilt.sh 2>/dev/null || true
-            fi
-            sudo bash "$APP_DIR/scripts/deploy_prebuilt.sh" /tmp/frontend-build.tar.gz
+            TMP_DIR="/tmp/ozoxx-deploy"
+            PKG="/tmp/deploy-package.tar.gz"
+
+            echo "==> Extraindo pacote de deploy..."
+            rm -rf "$TMP_DIR"
+            mkdir -p "$TMP_DIR"
+            tar -xzf "$PKG" -C "$TMP_DIR"
+            rm -f "$PKG"
+
+            echo "==> Instalando scripts mais recentes..."
+            mkdir -p "$APP_DIR/scripts"
+            cp "$TMP_DIR/scripts/deploy_prebuilt.sh" "$APP_DIR/scripts/deploy_prebuilt.sh"
+            chmod +x "$APP_DIR/scripts/deploy_prebuilt.sh"
+
+            echo "==> Executando deploy..."
+            sudo bash "$APP_DIR/scripts/deploy_prebuilt.sh" "$TMP_DIR"
